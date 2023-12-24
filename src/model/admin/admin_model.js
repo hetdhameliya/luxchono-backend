@@ -1,7 +1,7 @@
 const { Schema, model } = require("mongoose");
-const { hashPassword } = require("../util/hash");
+const { hashPassword } = require("../../util/hash");
 
-const userSchema = new Schema(
+const adminSchema = new Schema(
   {
     email: {
       type: String,
@@ -26,18 +26,22 @@ const userSchema = new Schema(
     publicId: {
       type: String,
       default: null,
-    }
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-userSchema.pre("save", function (next) {
+adminSchema.pre("save", function (next) {
   if (this.isModified("password")) {
     this.password = hashPassword(this.password);
   }
   next();
 });
 
-module.exports = UserModel = model("users", userSchema);
+module.exports = AdminModel = model("admins", adminSchema);

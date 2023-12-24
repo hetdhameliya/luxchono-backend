@@ -15,22 +15,25 @@ async function verifyEmail(req, res, next) {
     let htmlData = fs.readFileSync(filePath, "utf-8");
     const otp = generateOtp();
     htmlData = htmlData.replace("${otp}", otp);
-    transporter.sendMail({
-      to: email,
-      subject: "Verify email",
-      html: htmlData,
-    }, async (err, _result) => {
-      if (err) {
-        return next(new ApiError(400, err.message));
+    transporter.sendMail(
+      {
+        to: email,
+        subject: "Verify email",
+        html: htmlData,
+      },
+      async (err, _result) => {
+        if (err) {
+          return next(new ApiError(400, err.message));
+        }
+        await OtpModel.deleteMany({ email: email });
+        const otpModel = new OtpModel({ email, otp });
+        await otpModel.save();
+        setTimeout(async () => {
+          await OtpModel.findByIdAndDelete(otpModel._id);
+        }, 1000 * 60);
+        res.status(200).json({ success: true, message: "Otp send your email" });
       }
-      await OtpModel.deleteMany({ email: email });
-      const otpModel = new OtpModel({ email, otp });
-      await otpModel.save();
-      setTimeout(async () => {
-        await OtpModel.findByIdAndDelete(otpModel._id);
-      }, 1000 * 60);
-      res.status(200).json({ success: true, message: "Otp send your email" });
-    });
+    );
   } catch (e) {
     next(new ApiError(400, e.message));
   }
@@ -62,12 +65,10 @@ async function register(req, res, next) {
     }
     const user = new UserModel(req.body);
     await user.save();
-    res
-      .status(201)
-      .json({
-        success: true,
-        message: "Register successfully",
-      });
+    res.status(201).json({
+      success: true,
+      message: "Register successfully",
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
@@ -84,8 +85,14 @@ async function login(req, res, next) {
     if (!match) {
       return next(new ApiError(400, "Password is wrong"));
     }
-    const token = createToken({ _id: findUser._id });
-    res.status(200).json({ success: true, token, message: "login successfully" });
+    const token = createToken({
+      _id: findUser._id,
+      role: "user",
+      email: findUser.email,
+    });
+    res
+      .status(200)
+      .json({ success: true, token, message: "login successfully" });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
