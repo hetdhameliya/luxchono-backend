@@ -1,7 +1,11 @@
-const { hashSync } = require("bcrypt");
+const { hashSync, compareSync } = require("bcrypt");
 
 function hashPassword(password) {
   return hashSync(password, 8);
 }
 
-module.exports = { hashPassword };
+function comparePassword(password, hashPassword) {
+  return compareSync(password, hashPassword);
+}
+
+module.exports = { hashPassword, comparePassword };

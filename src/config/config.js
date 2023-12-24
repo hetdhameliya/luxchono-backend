@@ -4,3 +4,6 @@ config();
 
 module.exports.PORT = process.env.PORT;
 module.exports.DB_CONNECT = process.env.DB_CONNECT;
+module.exports.MAIL_EMAIL = process.env.MAIL_EMAIL;
+module.exports.MAIL_PASSWORD = process.env.MAIL_PASSWORD;
+module.exports.JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
