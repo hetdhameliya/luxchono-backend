@@ -1,4 +1,5 @@
 const { Schema, model } = require("mongoose");
+const cloudinary = require("../../util/cloudinary");
 
 const brandSchema = new Schema(
   {
@@ -32,6 +33,12 @@ const brandSchema = new Schema(
   },
   { timestamps: true }
 );
+
+brandSchema.post("findOneAndDelete", async function (doc, next) {
+  await cloudinary.uploader.destroy(doc.iconPublicId);
+  await cloudinary.uploader.destroy(doc.imagePublicId);
+  next();
+});
 
 const BrandModel = model("brands", brandSchema);
 

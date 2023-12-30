@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const { comparePassword } = require("../util/hash");
 const { createToken } = require("../util/jwt_token");
+const { USER_ROLE } = require("../config/string");
 
 async function verifyEmail(req, res, next) {
   try {
@@ -87,7 +88,7 @@ async function login(req, res, next) {
     }
     const token = createToken({
       _id: findUser._id,
-      role: "user",
+      role: USER_ROLE,
       email: findUser.email,
     });
     res

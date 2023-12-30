@@ -1,0 +1,91 @@
+const ApiError = require("../../util/error");
+const cloudinary = require("../../util/cloudinary");
+const { CLOUDINARY_FOLDER_NAME } = require("../../config/string");
+const BrandModel = require("../../model/admin/brand_model");
+const { isValidObjectId } = require('mongoose');
+
+async function add(req, res, next) {
+    try {
+        const existingBrand = await BrandModel.findOne({ name: new RegExp('^' + req.body.name + '$', 'i') });
+        if (existingBrand) {
+            return next(new ApiError(400, "Brand name must be unique"));
+        }
+        if (req.files.image === undefined || req.files.icon === undefined) {
+            return next(new ApiError(403, "icon and image required"));
+        }
+        const iconResult = await cloudinary.uploader.upload(req.files.icon[0].path, { folder: CLOUDINARY_FOLDER_NAME });
+        const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, { folder: CLOUDINARY_FOLDER_NAME });
+        req.body.icon = iconResult.secure_url;
+        req.body.iconPublicId = iconResult.public_id;
+        req.body.image = imageResult.secure_url;
+        req.body.imagePublicId = imageResult.public_id;
+        const brand = new BrandModel(req.body);
+        await brand.save();
+        res.status(201).json({ success: true, message: "Brand add successfully", data: brand });
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+
+async function get(req, res, next) {
+    try {
+        const brands = await BrandModel.find();
+        res.status(200).json({ success: true, data: brands });
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+async function update(req, res, next) {
+    try {
+        const { name } = req.body;
+        const brand = await BrandModel.findById(req.params.id);
+        if (name !== undefined) {
+            if (name !== brand.name) {
+                const existingBrand = await BrandModel.findOne({ name: new RegExp('^' + name + '$', 'i') });
+                if (existingBrand) {
+                    return next(new ApiError(400, "Brand name must be unique"));
+                } else {
+                    brand.name = name;
+                }
+            } else {
+                brand.name = name;
+            }
+        }
+        if (req.files.image !== undefined) {
+            const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, { folder: CLOUDINARY_FOLDER_NAME });
+            await cloudinary.uploader.destroy(brand.imagePublicId);
+            brand.imagePublicId = imageResult.public_id;
+            brand.image = imageResult.secure_url;
+        }
+        if (req.files.icon !== undefined) {
+            const iconResult = await cloudinary.uploader.upload(req.files.icon[0].path, { folder: CLOUDINARY_FOLDER_NAME });
+            await cloudinary.uploader.destroy(brand.iconPublicId);
+            brand.iconPublicId = iconResult.public_id;
+            brand.icon = iconResult.secure_url;
+        }
+        await brand.save();
+        res.status(200).json({ success: true, message: "Brand update successfully", data: brand });
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+
+async function deleteBrand(req, res, next) {
+    try {
+        let idsToDelete;
+        if (req.query.id && Array.isArray(req.query.id)) {
+            idsToDelete = req.query.id;
+            const isValid = idsToDelete.every(id => isValidObjectId(id));
+            if (!isValid) {
+                return next(new ApiError(400, 'Invalid ID format'));
+            }
+        } else {
+            return next(new ApiError(400, 'Invalid ID format'));
+        }
+        await BrandModel.deleteMany({ _id: { $in: idsToDelete } });
+        res.status(200).json({ success: true, message: "Brands deleted successfully" });
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+module.exports = { add, get, update, deleteBrand };

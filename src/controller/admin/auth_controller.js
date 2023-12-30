@@ -6,6 +6,7 @@ const transporter = require("../../util/transporter");
 const { comparePassword } = require("../../util/hash");
 const { createToken } = require("../../util/jwt_token");
 const { VERIFY_EMAIL_ROUTE } = require("../../config/config");
+const { ADMIN_ROLE } = require("../../config/string");
 
 async function register(req, res, next) {
   try {
@@ -17,7 +18,7 @@ async function register(req, res, next) {
     const admin = new AdminModel(req.body);
     await admin.save();
     const id = admin._id;
-    const filePath = path.join(__dirname, "../../../../public/link.html");
+    const filePath = path.join(__dirname, "../../../public/link.html");
     let htmlData = fs.readFileSync(filePath, "utf-8");
     htmlData = htmlData.replace(
       "${verificationLink}",
@@ -76,7 +77,7 @@ async function login(req, res, next) {
     }
     const token = createToken({
       _id: findAdmin._id,
-      role: "admin",
+      role: ADMIN_ROLE,
       email: findAdmin.email,
     });
     res
