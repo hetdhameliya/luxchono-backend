@@ -1,12 +1,12 @@
 const ApiError = require("../../util/error");
 const { upload, destroy } = require("../../util/cloudinary");
-const BrandModel = require("../../model/admin/brand_model");
+const CategoryModel = require("../../model/admin/category_model");
 const { isValidObjectId } = require('mongoose');
 
 async function add(req, res, next) {
     try {
-        const existingBrand = await BrandModel.findOne({ name: new RegExp('^' + req.body.name + '$', 'i') });
-        if (existingBrand) {
+        const existingCategory = await CategoryModel.findOne({ name: new RegExp('^' + req.body.name + '$', 'i') });
+        if (existingCategory) {
             return next(new ApiError(400, "Brand name must be unique"));
         }
         if (req.files.image === undefined || req.files.icon === undefined) {
@@ -18,9 +18,9 @@ async function add(req, res, next) {
         req.body.iconPublicId = iconResult.public_id;
         req.body.image = imageResult.secure_url;
         req.body.imagePublicId = imageResult.public_id;
-        const brand = new BrandModel(req.body);
-        await brand.save();
-        res.status(200).json({ success: true, message: "Brand add successfully", data: brand });
+        const category = new CategoryModel(req.body);
+        await category.save();
+        res.status(200).json({ success: true, message: "Category add successfully", data: category });
     } catch (e) {
         console.log(e);
         return next(new ApiError(400, e.message));
@@ -29,8 +29,8 @@ async function add(req, res, next) {
 
 async function get(req, res, next) {
     try {
-        const brands = await BrandModel.find();
-        res.status(200).json({ success: true, data: brands });
+        const categories = await CategoryModel.find();
+        res.status(200).json({ success: true, data: categories });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -38,39 +38,39 @@ async function get(req, res, next) {
 async function update(req, res, next) {
     try {
         const { name } = req.body;
-        const brand = await BrandModel.findById(req.params.id);
+        const category = await CategoryModel.findById(req.params.id);
         if (name !== undefined) {
-            if (name !== brand.name) {
-                const existingBrand = await BrandModel.findOne({ name: new RegExp('^' + name + '$', 'i') });
-                if (existingBrand) {
+            if (name !== category.name) {
+                const existingCategory = await CategoryModel.findOne({ name: new RegExp('^' + name + '$', 'i') });
+                if (existingCategory) {
                     return next(new ApiError(400, "Brand name must be unique"));
                 } else {
-                    brand.name = name;
+                    category.name = name;
                 }
             } else {
-                brand.name = name;
+                category.name = name;
             }
         }
         if (req.files.image !== undefined) {
             const imageResult = await upload(req.files.image[0].path);
-            await destroy(brand.imagePublicId);
-            brand.imagePublicId = imageResult.public_id;
-            brand.image = imageResult.secure_url;
+            await destroy(category.imagePublicId);
+            category.imagePublicId = imageResult.public_id;
+            category.image = imageResult.secure_url;
         }
         if (req.files.icon !== undefined) {
             const iconResult = await upload(req.files.icon[0].path);
-            await destroy(brand.iconPublicId);
-            brand.iconPublicId = iconResult.public_id;
-            brand.icon = iconResult.secure_url;
+            await destroy(category.iconPublicId);
+            category.iconPublicId = iconResult.public_id;
+            category.icon = iconResult.secure_url;
         }
-        await brand.save();
-        res.status(200).json({ success: true, message: "Brand update successfully", data: brand });
+        await category.save();
+        res.status(200).json({ success: true, message: "Category update successfully", data: category });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
 }
 
-async function deleteBrand(req, res, next) {
+async function deleteCategory(req, res, next) {
     try {
         let idsToDelete;
         if (req.query.id && Array.isArray(req.query.id)) {
@@ -83,11 +83,11 @@ async function deleteBrand(req, res, next) {
             return next(new ApiError(400, 'Invalid ID format'));
         }
         for (let i = 0; i < idsToDelete.length; i++) {
-            await BrandModel.findOneAndDelete({ _id: idsToDelete[i] });
+            await CategoryModel.findOneAndDelete({ _id: idsToDelete[i] });
         }
         res.status(200).json({ success: true, message: "Brands deleted successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
 }
-module.exports = { add, get, update, deleteBrand };
+module.exports = { add, get, update, deleteCategory };

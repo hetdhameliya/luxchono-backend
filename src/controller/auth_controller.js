@@ -66,7 +66,7 @@ async function register(req, res, next) {
     }
     const user = new UserModel(req.body);
     await user.save();
-    res.status(201).json({
+    res.status(200).json({
       success: true,
       message: "Register successfully",
     });
