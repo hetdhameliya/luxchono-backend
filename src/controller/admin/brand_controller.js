@@ -1,6 +1,5 @@
 const ApiError = require("../../util/error");
-const cloudinary = require("../../util/cloudinary");
-const { CLOUDINARY_FOLDER_NAME } = require("../../config/string");
+const { upload, destroy } = require("../../util/cloudinary");
 const BrandModel = require("../../model/admin/brand_model");
 const { isValidObjectId } = require('mongoose');
 
@@ -13,8 +12,8 @@ async function add(req, res, next) {
         if (req.files.image === undefined || req.files.icon === undefined) {
             return next(new ApiError(403, "icon and image required"));
         }
-        const iconResult = await cloudinary.uploader.upload(req.files.icon[0].path, { folder: CLOUDINARY_FOLDER_NAME });
-        const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, { folder: CLOUDINARY_FOLDER_NAME });
+        const iconResult = await upload(req.files.icon[0].path);
+        const imageResult = await upload(req.files.image[0].path);
         req.body.icon = iconResult.secure_url;
         req.body.iconPublicId = iconResult.public_id;
         req.body.image = imageResult.secure_url;
@@ -23,6 +22,7 @@ async function add(req, res, next) {
         await brand.save();
         res.status(201).json({ success: true, message: "Brand add successfully", data: brand });
     } catch (e) {
+        console.log(e);
         return next(new ApiError(400, e.message));
     }
 }
@@ -52,14 +52,14 @@ async function update(req, res, next) {
             }
         }
         if (req.files.image !== undefined) {
-            const imageResult = await cloudinary.uploader.upload(req.files.image[0].path, { folder: CLOUDINARY_FOLDER_NAME });
-            await cloudinary.uploader.destroy(brand.imagePublicId);
+            const imageResult = await upload(req.files.image[0].path);
+            await destroy(brand.imagePublicId);
             brand.imagePublicId = imageResult.public_id;
             brand.image = imageResult.secure_url;
         }
         if (req.files.icon !== undefined) {
-            const iconResult = await cloudinary.uploader.upload(req.files.icon[0].path, { folder: CLOUDINARY_FOLDER_NAME });
-            await cloudinary.uploader.destroy(brand.iconPublicId);
+            const iconResult = await upload(req.files.icon[0].path);
+            await destroy(brand.iconPublicId);
             brand.iconPublicId = iconResult.public_id;
             brand.icon = iconResult.secure_url;
         }
@@ -82,7 +82,9 @@ async function deleteBrand(req, res, next) {
         } else {
             return next(new ApiError(400, 'Invalid ID format'));
         }
-        await BrandModel.deleteMany({ _id: { $in: idsToDelete } });
+        for (let i = 0; i < idsToDelete.length; i++) {
+            await BrandModel.findOneAndDelete({ _id: idsToDelete[i] });
+        }
         res.status(200).json({ success: true, message: "Brands deleted successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
