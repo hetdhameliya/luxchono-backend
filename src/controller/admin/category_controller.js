@@ -20,7 +20,7 @@ async function add(req, res, next) {
         req.body.imagePublicId = imageResult.public_id;
         const category = new CategoryModel(req.body);
         await category.save();
-        res.status(200).json({ success: true, message: "Category add successfully", data: category });
+        res.status(200).json({ statusCode: 200, success: true, message: "Category add successfully", data: category });
     } catch (e) {
         console.log(e);
         return next(new ApiError(400, e.message));
@@ -30,7 +30,7 @@ async function add(req, res, next) {
 async function get(req, res, next) {
     try {
         const categories = await CategoryModel.find();
-        res.status(200).json({ success: true, data: categories });
+        res.status(200).json({ statusCode: 200, success: true, data: categories });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -64,7 +64,7 @@ async function update(req, res, next) {
             category.icon = iconResult.secure_url;
         }
         await category.save();
-        res.status(200).json({ success: true, message: "Category update successfully", data: category });
+        res.status(200).json({ statusCode: 200, success: true, message: "Category update successfully", data: category });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -85,7 +85,7 @@ async function deleteCategory(req, res, next) {
         for (let i = 0; i < idsToDelete.length; i++) {
             await CategoryModel.findOneAndDelete({ _id: idsToDelete[i] });
         }
-        res.status(200).json({ success: true, message: "Brands deleted successfully" });
+        res.status(200).json({ statusCode: 200, success: true, message: "Brands deleted successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }

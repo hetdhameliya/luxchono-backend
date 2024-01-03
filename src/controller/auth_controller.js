@@ -32,7 +32,7 @@ async function verifyEmail(req, res, next) {
         setTimeout(async () => {
           await OtpModel.findByIdAndDelete(otpModel._id);
         }, 1000 * 60);
-        res.status(200).json({ success: true, message: "Otp send your email" });
+        res.status(200).json({ statusCode: 200, success: true, message: "Otp send your email" });
       }
     );
   } catch (e) {
@@ -51,7 +51,7 @@ async function verifyOtp(req, res, next) {
       return next(new ApiError(400, "Otp is wrong"));
     }
     await OtpModel.deleteMany({ email: email });
-    res.status(200).json({ success: true, message: "Otp is write" });
+    res.status(200).json({ statusCode: 200, success: true, message: "Otp is write" });
   } catch (e) {
     next(new ApiError(400, e.message));
   }
@@ -67,7 +67,7 @@ async function register(req, res, next) {
     const user = new UserModel(req.body);
     await user.save();
     res.status(200).json({
-      success: true,
+      statusCode: 200, success: true,
       message: "Register successfully",
     });
   } catch (e) {
@@ -93,7 +93,7 @@ async function login(req, res, next) {
     });
     res
       .status(200)
-      .json({ success: true, token, message: "login successfully" });
+      .json({ statusCode: 200, success: true, token, message: "login successfully" });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }

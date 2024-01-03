@@ -20,7 +20,7 @@ async function add(req, res, next) {
         req.body.imagePublicId = imageResult.public_id;
         const brand = new BrandModel(req.body);
         await brand.save();
-        res.status(200).json({ success: true, message: "Brand add successfully", data: brand });
+        res.status(200).json({ statusCode: 200, success: true, message: "Brand add successfully", data: brand });
     } catch (e) {
         console.log(e);
         return next(new ApiError(400, e.message));
@@ -30,7 +30,7 @@ async function add(req, res, next) {
 async function get(req, res, next) {
     try {
         const brands = await BrandModel.find();
-        res.status(200).json({ success: true, data: brands });
+        res.status(200).json({ statusCode: 200, success: true, data: brands });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -64,7 +64,7 @@ async function update(req, res, next) {
             brand.icon = iconResult.secure_url;
         }
         await brand.save();
-        res.status(200).json({ success: true, message: "Brand update successfully", data: brand });
+        res.status(200).json({ statusCode: 200, success: true, message: "Brand update successfully", data: brand });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -85,7 +85,7 @@ async function deleteBrand(req, res, next) {
         for (let i = 0; i < idsToDelete.length; i++) {
             await BrandModel.findOneAndDelete({ _id: idsToDelete[i] });
         }
-        res.status(200).json({ success: true, message: "Brands deleted successfully" });
+        res.status(200).json({ statusCode: 200, success: true, message: "Brands deleted successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }

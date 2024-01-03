@@ -47,7 +47,7 @@ const addProduct = async (req, res, next) => {
                 }
             )
             .exec();
-        res.status(200).json({ success: true, message: "Product add successfully", data: productById });
+        res.status(200).json({ statusCode: 200, success: true, message: "Product add successfully", data: productById });
     } catch (e) {
         return next(new ApiError(400, "Please enter valid product details"));
     }
@@ -79,7 +79,7 @@ const getProduct = async (req, res, next) => {
                 }
             )
             .exec();
-        res.status(200).json({ success: true, data: products });
+        res.status(200).json({ statusCode: 200, success: true, data: products });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -146,7 +146,7 @@ const updateProduct = async (req, res, next) => {
                 }
             )
             .exec();
-        res.status(200).json({ success: true, message: "Product updated successfully", data: productById });
+        res.status(200).json({ statusCode: 200, success: true, message: "Product updated successfully", data: productById });
     } catch (e) {
         console.log(e);
         return next(new ApiError(400, e.message));
@@ -170,7 +170,7 @@ const deleteProduct = async (req, res, next) => {
             promises.push(ProductModel.findOneAndDelete({ _id: idsToDelete[i] }));
         }
         await Promise.all(promises);
-        res.status(200).json({ success: true, message: "Product deleted successfully" });
+        res.status(200).json({ statusCode: 200, success: true, message: "Product deleted successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
