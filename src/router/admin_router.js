@@ -11,7 +11,7 @@ const {
 const router = Router();
 
 router.post("/register", register);
-router.post("/verify-email", verifyAdminEmail);
+router.get("/verify-email", verifyAdminEmail);
 router.post("/login", login);
 router.use("/brand", brandRouter);
 router.use("/category", categoryRouter);
