@@ -23,14 +23,18 @@ const productSchema = new Schema(
             required: true,
         },
         image: {
-            type: [String],
-            required: true,
+            type: [
+                {
+                    url: {
+                        type: String,
+                    },
+                    publicId: {
+                        type: String,
+                    }
+                }
+            ],
             default: [],
-        },
-        imagePublicId: {
-            type: [String],
             required: true,
-            default: [],
         },
         thumbnail: {
             type: String,
@@ -97,7 +101,7 @@ const productSchema = new Schema(
 
 productSchema.post("findOneAndDelete", async function (doc, next) {
     let publicIds = [];
-    publicIds.push(...doc.imagePublicId);
+    publicIds.push(...doc.image.map((e) => e.publicId));
     publicIds.push(doc.thumbnailPublicId);
     const promise = publicIds.map((id) => destroy(id));
     await Promise.all(promise);

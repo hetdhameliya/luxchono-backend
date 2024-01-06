@@ -22,14 +22,21 @@ async function add(req, res, next) {
         await category.save();
         res.status(200).json({ statusCode: 200, success: true, message: "Category add successfully", data: category });
     } catch (e) {
-        console.log(e);
         return next(new ApiError(400, e.message));
     }
 }
 
 async function get(req, res, next) {
     try {
-        const categories = await CategoryModel.find();
+        let search = {};
+        if (req.query.search) {
+            search = {
+                $or: [
+                    { name: new RegExp(req.query.search, "i") }
+                ]
+            }
+        }
+        const categories = await CategoryModel.find(search);
         res.status(200).json({ statusCode: 200, success: true, data: categories });
     } catch (e) {
         return next(new ApiError(400, e.message));

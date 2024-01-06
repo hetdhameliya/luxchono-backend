@@ -82,7 +82,7 @@ async function login(req, res, next) {
     });
     res
       .status(200)
-      .json({ statusCode: 200, success: true, token, message: "login successfully" });
+      .json({ statusCode: 200, success: true, token, message: "login successfully", data: { username: findAdmin.username } });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
