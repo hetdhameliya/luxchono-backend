@@ -10,8 +10,8 @@ const databaseConnect = require("./src/database/index");
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false })); // parse url data
-databaseConnect(); // database connect
+app.use(bodyParser.urlencoded({ extended: false }));
+databaseConnect();
 
 app.get("/", (_req, res) => {
   res.send("Server start");
