@@ -25,8 +25,6 @@ function verifyUser(role) {
                             req.role = data.role;
                             req.user = findUser;
                             return next();
-                        } else {
-                            return next(new ApiError(401, "Unauthorized user"));
                         }
                     } else if (role === ADMIN_ROLE) {
                         const findAdmin = await AdminModel.findById(data._id);
@@ -35,8 +33,6 @@ function verifyUser(role) {
                             req.role = data.role;
                             req.user = findAdmin;
                             return next();
-                        } else {
-                            return next(new ApiError(401, "Unauthorized user"));
                         }
                     }
                     return next(new ApiError(401, "Unauthorized user"));
@@ -50,8 +46,6 @@ function verifyUser(role) {
                             req.role = data.role;
                             req.user = findUser;
                             return next();
-                        } else {
-                            return next(new ApiError(401, "Unauthorized user"));
                         }
                     } else if (data.role === ADMIN_ROLE) {
                         const findAdmin = await AdminModel.findById(data._id);
@@ -60,8 +54,6 @@ function verifyUser(role) {
                             req.role = data.role;
                             req.user = findAdmin;
                             return next();
-                        } else {
-                            return next(new ApiError(401, "Unauthorized user"));
                         }
                     }
                     return next(new ApiError(401, "Unauthorized user"));

@@ -2,27 +2,27 @@ const mongoose = require("mongoose");
 const CartModel = require("../model/cart_model");
 const ApiError = require("../util/error");
 
-async function addRemoveCart(req, res, next) {
+async function addCart(req, res, next) {
     try {
         const id = req.id;
         const { pid } = req.body;
         const findCartProduct = await CartModel.findOne({ pid, uid: id });
         if (findCartProduct) {
-            await CartModel.deleteOne({ pid, uid: id });
+            findCartProduct.quantity = findCartProduct.quantity + 1;
+            await findCartProduct.save();
             return res.status(200).json({
                 statusCode: 200,
                 success: true,
-                message: "Remove product from the cart"
-            });
-        } else {
-            const cartProduct = new CartModel({ pid, uid: id });
-            await cartProduct.save();
-            return res.status(200).json({
-                statusCode: 200,
-                success: true,
-                message: "Add product in the cart"
+                message: "Item added to cart"
             });
         }
+        const cartProduct = new CartModel({ pid, uid: id });
+        await cartProduct.save();
+        return res.status(200).json({
+            statusCode: 200,
+            success: true,
+            message: "Item added to cart"
+        });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -91,9 +91,29 @@ async function getAllCartProduct(req, res, next) {
                     createdAt: '$createdAt',
                     updatedAt: "$updatedAt"
                 }
+            },
+            {
+                $addFields: {
+                    productTotalAmount: {
+                        $multiply: ["$quantity", "$product.dummyPrice"]
+                    },
+                    productDiscountAmount: {
+                        $subtract: [{ $multiply: ["$quantity", "$product.dummyPrice"] }, { $multiply: ["$quantity", "$product.price"] }]
+                    },
+                    productPaymentAmount: {
+                        $multiply: ["$quantity", "$product.price"]
+                    },
+                }
             }
         ]).exec();
-        return res.status(200).json({ statusCode: 200, success: true, data: cartProducts });
+        let cartTotalAmount = 0;
+        let cartPaymentAmount = 0;
+        for (let i = 0; i < cartProducts.length; i++) {
+            cartPaymentAmount += cartProducts[i].productPaymentAmount;
+            cartTotalAmount += (cartProducts[i].product.dummyPrice * cartProducts[i].quantity);
+        }
+        let cartDiscountAmount = cartTotalAmount - cartPaymentAmount;
+        return res.status(200).json({ statusCode: 200, success: true, data: { cartProducts, cartTotalAmount, cartDiscountAmount, cartPaymentAmount } });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
@@ -104,11 +124,41 @@ async function updateCartProduct(req, res, next) {
         const pid = req.params.pid;
         const uid = req.id;
         const { quantity } = req.body;
-        await CartModel.findOneAndUpdate({ uid, pid }, { quantity });
-        return res.status(200).json({ statusCode: 200, success: true, message: "Cart update successfully" });
+        let updatedCart = await CartModel.findOneAndUpdate({ uid, pid }, { quantity });
+        if (updatedCart) {
+            return res.status(200).json({ statusCode: 200, success: true, message: "Cart update successfully" });
+        } else {
+            return next(new ApiError(400, 'Cart is not found'));
+        }
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
 }
 
-module.exports = { addRemoveCart, getAllCartProduct, updateCartProduct };
+async function removeCart(req, res, next) {
+    try {
+        const pid = req.params.pid;
+        const uid = req.id;
+        const removeCart = await CartModel.findOneAndDelete({ uid, pid });
+        if (removeCart) {
+            return res.status(200).json({ statusCode: 200, success: true, message: "Cart delete successfully" });
+        } else {
+            return next(new ApiError(400, 'Cart is not found'));
+        }
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+
+async function getAllCartIds(req, res, next) {
+    try {
+        const id = req.id;
+        const cartModels = await CartModel.find({ uid: id }).select({ pid: true });
+        const ids = cartModels.map((e) => e.pid);
+        return res.status(200).json({ statusCode: 200, success: true, data: ids });
+    } catch (e) {
+        return next(new ApiError(400, e.message));
+    }
+}
+
+module.exports = { addCart, getAllCartProduct, updateCartProduct, removeCart, getAllCartIds };
