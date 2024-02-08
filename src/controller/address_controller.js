@@ -7,7 +7,7 @@ async function addAddress(req, res, next) {
         body.uid = req.id;
         const address = new AddressModel(body);
         await address.save();
-        res.status(200).json({ statusCode: 201, success: true, message: 'Address save successfully' });
+        res.status(200).json({ statusCode: 200, success: true, message: 'Address save successfully' });
     } catch (e) {
         return next(new ApiError(400, 'Enter valid address details'));
     }
