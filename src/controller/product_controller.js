@@ -2,6 +2,43 @@ const ProductModel = require("../model/admin/product_model");
 const ApiError = require("../util/error");
 const mongoose = require("mongoose");
 
+const productPipeline = [
+    {
+        $addFields: {
+            image: {
+                $map: {
+                    input: "$image",
+                    as: "image",
+                    in: "$$image.url"
+                }
+            }
+        }
+    },
+    {
+        $lookup: {
+            from: 'categories',
+            localField: 'category',
+            foreignField: '_id',
+            as: 'category'
+        }
+    },
+    {
+        $lookup: {
+            from: 'brands',
+            localField: 'brand',
+            foreignField: '_id',
+            as: 'brand'
+        }
+    },
+    {
+        $addFields: {
+            brand: {
+                $arrayElemAt: ['$brand', 0]
+            }
+        }
+    }
+];
+
 async function getProducts(req, res, next) {
     try {
         let pipeline = [];
@@ -34,49 +71,13 @@ async function getProducts(req, res, next) {
             filters.price.$lte = parseFloat(endPrice);
         }
 
-
         if (search) {
             filters.$or = [
                 { name: { $regex: new RegExp(search, 'i') } },
                 { productModel: { $regex: new RegExp(search, 'i') } },
             ];
         }
-        pipeline.push(
-            {
-                $addFields: {
-                    image: {
-                        $map: {
-                            input: "$image",
-                            as: "image",
-                            in: "$$image.url"
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'brands',
-                    localField: 'brand',
-                    foreignField: '_id',
-                    as: 'brand'
-                }
-            },
-            {
-                $addFields: {
-                    brand: {
-                        $arrayElemAt: ['$brand', 0]
-                    }
-                }
-            },
-        );
+        pipeline.push(...productPipeline);
         if (size) {
             pipeline.push(
                 {
@@ -98,4 +99,4 @@ async function getProducts(req, res, next) {
     }
 }
 
-module.exports = { getProducts };
+module.exports = { getProducts, productPipeline };

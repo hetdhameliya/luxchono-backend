@@ -2,6 +2,7 @@ const ApiError = require("../../util/error");
 const { upload, multipleImageUpload, destroy } = require("../../util/cloudinary");
 const ProductModel = require("../../model/admin/product_model");
 const mongoose = require('mongoose');
+const { productPipeline } = require("../product_controller");
 
 const addProduct = async (req, res, next) => {
     try {
@@ -27,40 +28,7 @@ const addProduct = async (req, res, next) => {
             {
                 $match: { _id: product._id }
             },
-            {
-                $addFields: {
-                    image: {
-                        $map: {
-                            input: "$image",
-                            as: "image",
-                            in: "$$image.url"
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'brands',
-                    localField: 'brand',
-                    foreignField: '_id',
-                    as: 'brand'
-                }
-            },
-            {
-                $addFields: {
-                    brand: {
-                        $arrayElemAt: ['$brand', 0]
-                    }
-                }
-            }
+            ...productPipeline
         ]).exec();
         res.status(200).json({ statusCode: 200, success: true, message: "Product add successfully", data: productById[0] });
     } catch (e) {
@@ -79,40 +47,7 @@ const getProduct = async (req, res, next) => {
                     ]
                 }
             },
-            {
-                $addFields: {
-                    image: {
-                        $map: {
-                            input: "$image",
-                            as: "image",
-                            in: "$$image.url"
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'brands',
-                    localField: 'brand',
-                    foreignField: '_id',
-                    as: 'brand'
-                }
-            },
-            {
-                $addFields: {
-                    brand: {
-                        $arrayElemAt: ['$brand', 0]
-                    }
-                }
-            }
+            ...productPipeline
         ]);
         res.status(200).json({ statusCode: 200, success: true, data: products });
     } catch (e) {
@@ -171,40 +106,7 @@ const updateProduct = async (req, res, next) => {
             {
                 $match: { _id: findProduct._id }
             },
-            {
-                $addFields: {
-                    image: {
-                        $map: {
-                            input: "$image",
-                            as: "image",
-                            in: "$$image.url"
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'brands',
-                    localField: 'brand',
-                    foreignField: '_id',
-                    as: 'brand'
-                }
-            },
-            {
-                $addFields: {
-                    brand: {
-                        $arrayElemAt: ['$brand', 0]
-                    }
-                }
-            }
+            ...productPipeline
         ]).exec();
         res.status(200).json({ statusCode: 200, success: true, message: "Product updated successfully", data: productById[0] });
     } catch (e) {

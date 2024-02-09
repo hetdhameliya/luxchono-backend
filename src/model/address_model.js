@@ -31,6 +31,10 @@ const addressSchema = new Schema(
             type: String,
             required: true
         },
+        pincode: {
+            type: String,
+            required: true
+        },
         addressType: {
             type: String,
             enum: ['Office', 'Home'],

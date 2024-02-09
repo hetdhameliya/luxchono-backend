@@ -11,7 +11,7 @@ router.post("/", verifyUser(ADMIN_ROLE),
         { name: "image", maxCount: 1 }]),
     add
 );
-router.get("/", verifyUser([ADMIN_ROLE, USER_ROLE]), get);
+router.get("/", get);
 router.put("/:id", verifyUser(ADMIN_ROLE),
     multer.fields([
         { name: "icon", maxCount: 1 },
