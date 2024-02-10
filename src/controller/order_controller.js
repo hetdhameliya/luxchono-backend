@@ -236,7 +236,7 @@ async function getOrder(req, res, next) {
                 $group: {
                     _id: "$_id",
                     orderId: { $first: "$orderId" },
-                    paymentId: { $first: "$orderId" },
+                    paymentId: { $first: "$paymentId" },
                     products: {
                         $push: {
                             product: "$product",
