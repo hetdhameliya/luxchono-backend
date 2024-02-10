@@ -56,20 +56,21 @@ async function paymentOrder(req, res, next) {
     try {
         const { products, address } = req.body;
         if (products.length === 0) {
-            return res.status(200).json({ statusCode: 400, success: false, message: "Products is not empty" });
+            return next(new ApiError(400, "Product is not empty"));
         }
         if (!address) {
-            return res.status(200).json({ statusCode: 400, success: false, message: "Please enter address" });
+            return next(new ApiError(400, "Please enter address"));
         }
         const userAddress = await AddressModel.findOne({ uid: req.id, _id: address });
         if (!userAddress) {
-            return res.status(200).json({ statusCode: 400, success: false, message: "Enter valid address" });
+            return next(new ApiError(400, "Enter valid address"));
         }
         const orderProducts = [];
         for (let i = 0; i < products.length; i++) {
             orderProducts.push(getOrderProduct(products[i].product, products[i].quantity));
         }
         const data = await Promise.all(orderProducts);
+        let orderProduct = data.map((e) => ({ product: e.product, orderProductPrice: e.orderProductPrice, quantity: e.quantity }));
         let totalAmount = 0;
         let paymentAmount = 0;
         for (let i = 0; i < data.length; i++) {
@@ -79,7 +80,7 @@ async function paymentOrder(req, res, next) {
         let discountAmount = totalAmount - paymentAmount;
 
         const orderModel = new OrderModel({
-            products,
+            products: orderProduct,
             totalAmount,
             discountAmount,
             paymentAmount,
@@ -210,6 +211,7 @@ async function getOrder(req, res, next) {
                     orderId: 1,
                     paymentId: 1,
                     product: "$product",
+                    orderProductPrice: "$products.orderProductPrice",
                     quantity: "$products.quantity",
                     totalAmount: 1,
                     discountAmount: 1,
@@ -240,6 +242,7 @@ async function getOrder(req, res, next) {
                     products: {
                         $push: {
                             product: "$product",
+                            orderProductPrice: "$orderProductPrice",
                             quantity: "$quantity"
                         }
                     },
