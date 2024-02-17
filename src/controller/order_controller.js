@@ -9,6 +9,9 @@ const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
 
 async function getOrderProduct(pid, quantity) {
+    if(!mongoose.isValidObjectId(pid)) {
+        throw new Error("Id is not valid");
+    }
     const product = await ProductModel.aggregate([
         {
             $match: {
@@ -17,6 +20,10 @@ async function getOrderProduct(pid, quantity) {
         },
         ...productPipeline
     ]).exec();
+
+    if(product.length === 0) {
+        throw new Error("Product not exist");
+    }
     return {
         product: product[0],
         quantity,
@@ -32,6 +39,11 @@ async function makeOrder(req, res, next) {
             orderProducts.push(getOrderProduct(body[i].pid, body[i].quantity));
         }
         const data = await Promise.all(orderProducts);
+        for(let e of data) {
+            if(e.product.stock < e.quantity) {
+                return next(new ApiError(400, `${e.product.name} product is out of stock`))
+            }
+        }
         let totalAmount = 0;
         let paymentAmount = 0;
         for (let i = 0; i < data.length; i++) {
@@ -70,7 +82,12 @@ async function paymentOrder(req, res, next) {
             orderProducts.push(getOrderProduct(products[i].product, products[i].quantity));
         }
         const data = await Promise.all(orderProducts);
-        let orderProduct = data.map((e) => ({ product: e.product, orderProductPrice: e.orderProductPrice, quantity: e.quantity }));
+        for(let e of data) {
+            if(e.product.stock < e.quantity) {
+                return next(new ApiError(400, `${e.product.name} is out of stock`))
+            }
+        }
+        let orderProduct = data.map((e) => ({ product: e.product._id, orderProductPrice: e.orderProductPrice, quantity: e.quantity }));
         let totalAmount = 0;
         let paymentAmount = 0;
         for (let i = 0; i < data.length; i++) {
@@ -128,7 +145,7 @@ async function paymentOrder(req, res, next) {
             }
         });
     } catch (e) {
-        return next(new ApiError(400, "Try again!!"));
+        return next(new ApiError(400, e.message));
     }
 }
 
@@ -147,6 +164,10 @@ async function paymentVerification(req, res, next) {
             }
             order.paymentId = razorpay_payment_id;
             await order.save();
+            const orderProducts = order.products;
+            for(let e of orderProducts) {
+                await ProductModel.findByIdAndUpdate(e.product, { $inc: { stock: -e.quantity } });
+            }
             return res.redirect(`${REDIRECT_FRONTEND_URL}?orderId=${order._id}`);
         }
         return next(new ApiError(400, "Payment failed"));
