@@ -47,6 +47,11 @@ const orderSchema = new Schema(
             type: Number,
             required: true
         },
+        status: { 
+            type: String, 
+            enum: ['Pending', 'Cancelled', 'Completed', 'Shipped', 'Out of Delivery', 'Delivered'],
+            default: 'Pending'
+        },
         user: {
             type: Schema.Types.ObjectId,
             ref: "users",

@@ -163,6 +163,7 @@ async function paymentVerification(req, res, next) {
                 return res.redirect(`${REDIRECT_FRONTEND_URL}`);
             }
             order.paymentId = razorpay_payment_id;
+            order.status = "Completed";
             await order.save();
             const orderProducts = order.products;
             for(let e of orderProducts) {
@@ -200,7 +201,8 @@ async function getOrder(req, res, next) {
                         {
                             $project: {
                                 username: 1,
-                                email: 1
+                                email: 1,
+                                phoneNo: 1,
                             }
                         }
                     ]
@@ -237,6 +239,7 @@ async function getOrder(req, res, next) {
                     totalAmount: 1,
                     discountAmount: 1,
                     paymentAmount: 1,
+                    status: 1,
                     user: 1,
                     fullName: 1,
                     phoneNo: 1,
@@ -270,6 +273,7 @@ async function getOrder(req, res, next) {
                     totalAmount: { $first: "$totalAmount" },
                     discountAmount: { $first: "$discountAmount" },
                     paymentAmount: { $first: "$paymentAmount" },
+                    status: { $first: "$status" },
                     user: { $first: "$user" },
                     fullName: { $first: "$fullName" },
                     phoneNo: { $first: "$phoneNo" },
