@@ -47,8 +47,8 @@ const orderSchema = new Schema(
             type: Number,
             required: true
         },
-        status: { 
-            type: String, 
+        status: {
+            type: String,
             enum: ['Pending', 'Cancelled', 'Completed', 'Shipped', 'Out of Delivery', 'Delivered'],
             default: 'Pending'
         },
@@ -104,6 +104,10 @@ const orderSchema = new Schema(
         },
         longitude: {
             type: Number,
+            default: null
+        },
+        deliveryDate: {
+            type: Date,
             default: null
         }
     },
