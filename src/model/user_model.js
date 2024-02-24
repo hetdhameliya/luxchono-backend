@@ -1,11 +1,13 @@
 const { Schema, model } = require("mongoose");
 const { hashPassword } = require("../util/hash");
+const { USER_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE } = require("../config/string");
 
 const userSchema = new Schema(
   {
     email: {
       type: String,
       required: true,
+      unique: true,
     },
     username: {
       type: String,
@@ -17,7 +19,9 @@ const userSchema = new Schema(
     },
     phoneNo: {
       type: String,
-      required: true,
+      required: function () {
+        return this.role === USER_ROLE ? true : false;
+      },
     },
     image: {
       type: String,
@@ -26,7 +30,24 @@ const userSchema = new Schema(
     publicId: {
       type: String,
       default: null,
-    }
+    },
+    role: {
+      type: String,
+      enum: [USER_ROLE, ADMIN_ROLE, SUPER_ADMIN_ROLE],
+      required: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: function () {
+        return this.role === SUPER_ADMIN_ROLE || this.role === USER_ROLE ? true : false;
+      },
+    },
+    isAdminVerified: {
+      type: Boolean,
+      default: function () {
+        return this.role === SUPER_ADMIN_ROLE || this.role === USER_ROLE ? true : false;
+      },
+    },
   },
   {
     timestamps: true,

@@ -145,7 +145,7 @@ async function paymentOrder(req, res, next) {
                 prefill: {
                     name: req.user.username,
                     email: req.user.email,
-                    contact: req.user.phoneNo
+                    contact: req.user.phoneNo || ''
                 },
                 notes: {
                     address: userAddress.address
@@ -317,10 +317,9 @@ async function getOrder(req, res, next) {
 
 async function getAllOrder(req, res, next) {
     try {
-        const filter = {};
-        if (req.role === USER_ROLE) {
-            filter.user = req.user._id;
-        }
+        const filter = {
+            user: req.user._id,
+        };
         const orders = await OrderModel.aggregate([
             {
                 $match: filter
@@ -428,7 +427,7 @@ async function getAllOrder(req, res, next) {
                     __v: { $first: "$__v" }
                 }
             },
-            { $sort: { createdAt: -1 } } 
+            { $sort: { createdAt: -1 } }
         ]).exec();
         res.status(200).json({ statusCode: 200, success: true, data: orders });
     } catch (e) {

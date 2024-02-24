@@ -5,8 +5,8 @@ const { USER_ROLE } = require("../config/string");
 
 const router = Router();
 
-router.post("/add-remove-wishlist", verifyUser(USER_ROLE), addRemoveLike);
-router.get("/", verifyUser(USER_ROLE), getAllLikeProduct);
-router.get("/wishlist-id", verifyUser(USER_ROLE), getAllLikeIds);
+router.post("/add-remove-wishlist", verifyUser, addRemoveLike);
+router.get("/", verifyUser, getAllLikeProduct);
+router.get("/wishlist-id", verifyUser, getAllLikeIds);
 
 module.exports = router;

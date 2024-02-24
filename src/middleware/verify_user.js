@@ -1,69 +1,60 @@
 const { verifyToken } = require("../util/jwt_token");
 const ApiError = require("../util/error");
 const UserModel = require("../model/user_model");
-const AdminModel = require("../model/admin/admin_model");
-const { USER_ROLE, ADMIN_ROLE } = require("../config/string");
+const { ADMIN_ROLE, SUPER_ADMIN_ROLE } = require("../config/string");
 
-function verifyUser(role) {
-    return async (req, _res, next) => {
-        try {
-            const authorization = req.headers["authorization"];
-            if (!authorization) {
-                return next(new ApiError(401, "Unauthorized user"));
-            }
-            const token = authorization.split(" ")[1];
-            if (!token) {
-                return next(new ApiError(401, "Unauthorized user"));
-            }
-            const data = verifyToken(token);
-            if (typeof role === "string") {
-                if (data.role === role) {
-                    if (role === USER_ROLE) {
-                        const findUser = await UserModel.findById(data._id);
-                        if (findUser) {
-                            req.id = data._id;
-                            req.role = data.role;
-                            req.user = findUser;
-                            return next();
-                        }
-                    } else if (role === ADMIN_ROLE) {
-                        const findAdmin = await AdminModel.findById(data._id);
-                        if (findAdmin) {
-                            req.id = data._id;
-                            req.role = data.role;
-                            req.user = findAdmin;
-                            return next();
-                        }
-                    }
-                    return next(new ApiError(401, "Unauthorized user"));
-                }
-            } else {
-                if (role.includes(data.role)) {
-                    if (data.role === USER_ROLE) {
-                        const findUser = await UserModel.findById(data._id);
-                        if (findUser) {
-                            req.id = data._id;
-                            req.role = data.role;
-                            req.user = findUser;
-                            return next();
-                        }
-                    } else if (data.role === ADMIN_ROLE) {
-                        const findAdmin = await AdminModel.findById(data._id);
-                        if (findAdmin) {
-                            req.id = data._id;
-                            req.role = data.role;
-                            req.user = findAdmin;
-                            return next();
-                        }
-                    }
-                    return next(new ApiError(401, "Unauthorized user"));
-                }
-            }
-            return next(new ApiError(401, "Unauthorized user"));
-        } catch (e) {
+async function verifyUser(req, _res, next) {
+    try {
+        const authorization = req.headers["authorization"];
+        if (!authorization) {
             return next(new ApiError(401, "Unauthorized user"));
         }
+        const token = authorization.split(" ")[1];
+        if (!token) {
+            return next(new ApiError(401, "Unauthorized user"));
+        }
+        const data = verifyToken(token);
+        const findUser = await UserModel.findById(data._id);
+        if (!findUser) {
+            return next(new ApiError(401, "Unauthorized user"));
+        }
+        req.id = findUser._id;
+        req.role = findUser.role;
+        req.user = findUser;
+        return next();
+    } catch (e) {
+        return next(new ApiError(401, "Unauthorized user"));
     }
 }
 
-module.exports = { verifyUser };
+async function verifyAdmin(req, _res, next) {
+    try {
+        const authorization = req.headers["authorization"];
+        if (!authorization) {
+            return next(new ApiError(401, "Unauthorized user"));
+        }
+        const token = authorization.split(" ")[1];
+        if (!token) {
+            return next(new ApiError(401, "Unauthorized user"));
+        }
+        const data = verifyToken(token);
+        const findUser = await UserModel.findOne({ _id: data._id, role: { $in: [ADMIN_ROLE, SUPER_ADMIN_ROLE] } });
+        if (!findUser) {
+            return next(new ApiError(401, "Unauthorized user"));
+        }
+        if (!findUser.isVerified) {
+            return next(new ApiError(401, "Email is not verified"));
+        }
+        if (!findUser.isAdminVerified) {
+            return next(new ApiError(401, "Admin is not verfied by super admin"));
+        }
+        req.id = findUser._id;
+        req.role = findUser.role;
+        req.user = findUser;
+        return next();
+    } catch (e) {
+        return next(new ApiError(401, "Unauthorized user"));
+    }
+}
+
+module.exports = { verifyUser, verifyAdmin };

@@ -64,7 +64,7 @@ async function register(req, res, next) {
     if (findUser) {
       return next(new ApiError(400, "Email is exist"));
     }
-    const user = new UserModel(req.body);
+    const user = new UserModel({ ...req.body, role: USER_ROLE });
     await user.save();
     res.status(200).json({
       statusCode: 200, success: true,

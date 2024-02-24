@@ -1,4 +1,4 @@
-const AdminModel = require("../../model/admin/admin_model");
+const UserModel = require("../../model/user_model");
 const ApiError = require("../../util/error");
 const fs = require("fs");
 const path = require("path");
@@ -6,16 +6,16 @@ const transporter = require("../../util/transporter");
 const { comparePassword } = require("../../util/hash");
 const { createToken } = require("../../util/jwt_token");
 const { VERIFY_EMAIL_ROUTE } = require("../../config/config");
-const { ADMIN_ROLE } = require("../../config/string");
+const { ADMIN_ROLE, SUPER_ADMIN_ROLE } = require("../../config/string");
 
 async function register(req, res, next) {
   try {
     const { email } = req.body;
-    const findAdmin = await AdminModel.findOne({ email });
+    const findAdmin = await UserModel.findOne({ email });
     if (findAdmin) {
       return next(new ApiError(400, "Email already exist"));
     }
-    const admin = new AdminModel(req.body);
+    const admin = new UserModel({ ...req.body, role: ADMIN_ROLE });
     await admin.save();
     const id = admin._id;
     const filePath = path.join(__dirname, "../../../public/link.html");
@@ -47,7 +47,7 @@ async function register(req, res, next) {
 async function verifyAdminEmail(req, res, next) {
   try {
     const id = req.query.id;
-    const findAdmin = await AdminModel.findById(id);
+    const findAdmin = await UserModel.findById(id);
     if (!findAdmin) {
       return next(new ApiError(400, "This email is not valid"));
     }
@@ -64,12 +64,15 @@ async function verifyAdminEmail(req, res, next) {
 async function login(req, res, next) {
   try {
     const { email, password } = req.body;
-    const findAdmin = await AdminModel.findOne({ email });
+    const findAdmin = await UserModel.findOne({ email, role: { $in: [ADMIN_ROLE, SUPER_ADMIN_ROLE] } });
     if (!findAdmin) {
       return next(new ApiError(400, "Email is not exist"));
     }
     if (!findAdmin.isVerified) {
       return next(new ApiError(400, "Email is not verified"));
+    }
+    if (findAdmin.role === ADMIN_ROLE && !findAdmin.isAdminVerified) {
+      return next(new ApiError(400, "Admin is not verified by super admin"));
     }
     const match = comparePassword(password, findAdmin.password);
     if (!match) {

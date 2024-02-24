@@ -5,10 +5,10 @@ const { USER_ROLE } = require("../config/string");
 
 const router = Router();
 
-router.post("/add-cart", verifyUser(USER_ROLE), addCart);
-router.get("/", verifyUser(USER_ROLE), getAllCartProduct);
-router.patch("/:pid", verifyUser(USER_ROLE), updateCartProduct);
-router.delete("/:pid", verifyUser(USER_ROLE), removeCart);
-router.get("/cart-id", verifyUser(USER_ROLE), getAllCartIds);
+router.post("/add-cart", verifyUser, addCart);
+router.get("/", verifyUser, getAllCartProduct);
+router.patch("/:pid", verifyUser, updateCartProduct);
+router.delete("/:pid", verifyUser, removeCart);
+router.get("/cart-id", verifyUser, getAllCartIds);
 
 module.exports = router;
