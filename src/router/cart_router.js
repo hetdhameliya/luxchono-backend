@@ -1,7 +1,6 @@
 const { Router } = require("express");
 const { addCart, getAllCartProduct, updateCartProduct, removeCart, getAllCartIds } = require("../controller/cart_controller");
 const { verifyUser } = require("../middleware/verify_user");
-const { USER_ROLE } = require("../config/string");
 
 const router = Router();
 

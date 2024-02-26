@@ -1,7 +1,6 @@
 const { Router } = require("express");
 const { addRemoveLike, getAllLikeProduct, getAllLikeIds } = require("../controller/like_controller");
 const { verifyUser } = require("../middleware/verify_user");
-const { USER_ROLE } = require("../config/string");
 
 const router = Router();
 

@@ -1,6 +1,5 @@
 const { Router } = require("express");
 const { verifyUser } = require("../middleware/verify_user");
-const { USER_ROLE } = require("../config/string");
 const { addAddress, getAddress, deleteAddress, updateAddress, getOneAddress } = require("../controller/address_controller");
 
 const router = Router();

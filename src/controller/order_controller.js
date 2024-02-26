@@ -7,7 +7,6 @@ const { instance } = require("../config/razorpay_config");
 const OrderModel = require("../model/order_model");
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
-const { USER_ROLE } = require("../config/string");
 
 async function getOrderProduct(pid, quantity) {
     if (!mongoose.isValidObjectId(pid)) {
