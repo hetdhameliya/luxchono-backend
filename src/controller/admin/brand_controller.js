@@ -1,6 +1,7 @@
 const ApiError = require("../../util/error");
 const { upload, destroy } = require("../../util/cloudinary");
 const BrandModel = require("../../model/admin/brand_model");
+const ProductModel = require("../../model/admin/product_model");
 const { isValidObjectId } = require('mongoose');
 
 async function add(req, res, next) {
@@ -90,7 +91,10 @@ async function deleteBrand(req, res, next) {
             return next(new ApiError(400, 'Invalid ID format'));
         }
         for (let i = 0; i < idsToDelete.length; i++) {
-            await BrandModel.findOneAndDelete({ _id: idsToDelete[i] });
+            const findProduct = await ProductModel.find({ brand: idsToDelete[i] });
+            if (findProduct.length === 0) {
+                await BrandModel.findOneAndDelete({ _id: idsToDelete[i] });
+            }
         }
         res.status(200).json({ statusCode: 200, success: true, message: "Brands deleted successfully" });
     } catch (e) {

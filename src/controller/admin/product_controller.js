@@ -41,6 +41,7 @@ const getProduct = async (req, res, next) => {
         const products = await ProductModel.aggregate([
             {
                 $match: {
+                    isActive: true,
                     $or: [
                         { name: { $regex: req.query.search, $options: 'i' } },
                         { productModel: { $regex: req.query.search, $options: 'i' } }
@@ -58,7 +59,7 @@ const getProduct = async (req, res, next) => {
 const updateProduct = async (req, res, next) => {
     try {
         const { id } = req.params;
-        let { name, description, productModel, category, brand, stock, price, dummyPrice, warranty } = req.body;
+        let { name, description, productModel, category, brand, stock, price, dummyPrice, warranty, isActive } = req.body;
         if (!id) {
             return next(new ApiError(400, "Id is required"));
         }
@@ -92,15 +93,16 @@ const updateProduct = async (req, res, next) => {
             findProduct.thumbnail = resultThumbnail.secure_url;
             findProduct.thumbnailPublicId = resultThumbnail.public_id;
         }
-        findProduct.name = name;
-        findProduct.description = description;
-        findProduct.productModel = productModel;
-        findProduct.category = category;
-        findProduct.brand = brand;
-        findProduct.stock = stock;
-        findProduct.price = price;
-        findProduct.dummyPrice = dummyPrice;
-        findProduct.warranty = warranty;
+        findProduct.name = name || findProduct.name;
+        findProduct.description = description || findProduct.description;
+        findProduct.productModel = productModel || findProduct.productModel;
+        findProduct.category = category || findProduct.category;
+        findProduct.brand = brand || findProduct.brand;
+        findProduct.stock = stock || findProduct.stock;
+        findProduct.price = price || findProduct.price;
+        findProduct.dummyPrice = dummyPrice || findProduct.dummyPrice;
+        findProduct.warranty = warranty || findProduct.warranty;
+        findProduct.isActive = isActive || findProduct.isActive;
         await findProduct.save();
         const productById = await ProductModel.aggregate([
             {

@@ -8,6 +8,7 @@ const path = require("path");
 const { comparePassword } = require("../util/hash");
 const { createToken } = require("../util/jwt_token");
 const { USER_ROLE } = require("../config/string");
+const { USER_RESET_PASSWORD_ROUTE, ADMIN_RESET_PASSWORD_ROUTE } = require("../config/config");
 
 async function verifyEmail(req, res, next) {
   try {
@@ -99,4 +100,108 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { verifyEmail, verifyOtp, register, login };
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    const findUser = await UserModel.findOne({ email });
+    if (!findUser) {
+      return next(new ApiError(400, "This email user not exist"));
+    }
+    const filePath = path.join(__dirname, "../../public/reset_password.html");
+    let htmlData = fs.readFileSync(filePath, "utf-8");
+    if (findUser.role === USER_ROLE) {
+      htmlData = htmlData.replace("${resetPasswordLink}", `${USER_RESET_PASSWORD_ROUTE}?id=${findUser._id}`);
+    } else {
+      htmlData = htmlData.replace("${resetPasswordLink}", `${ADMIN_RESET_PASSWORD_ROUTE}?id=${findUser._id}`);
+    }
+    transporter.sendMail(
+      {
+        to: email,
+        subject: "Reset password",
+        html: htmlData,
+      },
+      async (err, _result) => {
+        if (err) {
+          return next(new ApiError(400, err.message));
+        }
+        res.status(200).json({ statusCode: 200, success: true, message: "Reset password mail send to your email" });
+      }
+    );
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const id = req.query.id;
+    const { newPassword } = req.body;
+    if (!id) {
+      return next(new ApiError(400, "User id is required"));
+    }
+    if (!newPassword) {
+      return next(new ApiError(400, "Password is required"));
+    }
+    const findUser = await UserModel.findById(id);
+    if (!findUser) {
+      return next(new ApiError(400, "User is not exist"));
+    }
+    findUser.password = newPassword;
+    await findUser.save({ validateBeforeSave: true });
+    res.status(200).json({ statusCode: 200, success: true, message: "Password change successfully" });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+async function idToEmail(req, res, next) {
+  try {
+    const id = req.query.id;
+    if (!id) {
+      return next(new ApiError(400, "User id is required"));
+    }
+    const findUser = await UserModel.findById(id);
+    if (!findUser) {
+      return next(new ApiError(400, "User is not exist"));
+    }
+    res.status(200).json({ statusCode: 200, success: true, data: { email: findUser.email } });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+async function changePassword(req, res, next) {
+  try {
+    const { password, newPassword } = req.body;
+    const findUser = await UserModel.findById(req.user._id);
+    if (!findUser) {
+      return next(new ApiError(400, "Email is not exist"));
+    }
+    const match = comparePassword(password, findUser.password);
+    if (!match) {
+      return next(new ApiError(400, "Old password is wrong"));
+    }
+    const newPasswordMatch = comparePassword(newPassword, findUser.password);
+    if (newPasswordMatch) {
+      return next(new ApiError(400, "This password is alreay used by you"));
+    }
+    findUser.password = newPassword.trim();
+    await findUser.save({ validateBeforeSave: true });
+    res
+      .status(200)
+      .json({ statusCode: 200, success: true, message: "Password change successfully" });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+async function profile(req, res, next) {
+  try {
+    const findUser = await UserModel.findById(req.id).select("-password -role -isVerified -isAdminVerified -publicId");
+    res.status(200).json({ statusCode: 200, success: true, date: findUser });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile };

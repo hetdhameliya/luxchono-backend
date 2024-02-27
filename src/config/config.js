@@ -16,3 +16,5 @@ module.exports.RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 module.exports.RAZORPAY_CALLBACK_URL = process.env.RAZORPAY_CALLBACK_URL;
 module.exports.REDIRECT_FRONTEND_URL = process.env.REDIRECT_FRONTEND_URL;
 module.exports.WEBSITE_IMAGE_URL = process.env.WEBSITE_IMAGE_URL;
+module.exports.USER_RESET_PASSWORD_ROUTE = process.env.USER_RESET_PASSWORD_ROUTE;
+module.exports.ADMIN_RESET_PASSWORD_ROUTE = process.env.ADMIN_RESET_PASSWORD_ROUTE;

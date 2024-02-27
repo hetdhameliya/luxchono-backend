@@ -94,6 +94,10 @@ const productSchema = new Schema(
         warranty: {
             type: String,
             required: true,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
         }
     },
     { timestamps: true }

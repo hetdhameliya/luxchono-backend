@@ -16,6 +16,7 @@ async function getOrderProduct(pid, quantity) {
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(pid),
+                isActive: true,
             },
         },
         ...productPipeline

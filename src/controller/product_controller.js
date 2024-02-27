@@ -44,7 +44,7 @@ async function getProducts(req, res, next) {
         let pipeline = [];
         const { category, brand, search, startPrice, endPrice, size } = req.query;
 
-        const filters = {};
+        const filters = { isActive: true };
 
         if (category && Array.isArray(category)) {
             let categoryIds = [];
@@ -109,7 +109,8 @@ async function getOneProduct(req, res, next) {
         const products = await ProductModel.aggregate([
             {
                 $match: {
-                    _id: new mongoose.Types.ObjectId(id)
+                    _id: new mongoose.Types.ObjectId(id),
+                    isActive: true,
                 }
             },
             ...productPipeline
@@ -120,6 +121,7 @@ async function getOneProduct(req, res, next) {
         const similarProduct = await ProductModel.aggregate([
             {
                 $match: {
+                    isActive: true,
                     $and: [
                         { _id: { $ne: products[0]._id } },
                         {
