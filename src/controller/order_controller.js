@@ -173,7 +173,7 @@ async function paymentVerification(req, res, next) {
             .digest('hex');
 
         if (generatedSignature === razorpay_signature) {
-            const order = await OrderModel.findOne({ orderId: razorpay_order_id });
+            const order = await OrderModel.findOne({ razorpayOrderId: razorpay_order_id });
             if (!order) {
                 return res.redirect(`${REDIRECT_FRONTEND_URL}`);
             }
