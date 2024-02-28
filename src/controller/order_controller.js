@@ -7,6 +7,8 @@ const { instance } = require("../config/razorpay_config");
 const OrderModel = require("../model/order_model");
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
+const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD } = require("../config/string");
+const { orderIdGenerate } = require("../util/utils");
 
 async function getOrderProduct(pid, quantity) {
     if (!mongoose.isValidObjectId(pid)) {
@@ -123,12 +125,14 @@ async function paymentOrder(req, res, next) {
             currency: "INR",
         });
         await orderModel.save();
-        orderModel.orderId = order.id;
+        orderModel.razorpayOrderId = order.id;
+        orderModel.orderId = orderIdGenerate();
+        orderModel.method = ONLINE_PAYMENT_METHOD;
         await orderModel.save();
 
         setTimeout(async () => {
-            const orderDelete = await OrderModel.findOneAndDelete({ _id: orderModel._id, status: { $eq: "Pending" } });
-        }, 1000 * 60);
+            const orderDelete = await OrderModel.findOneAndDelete({ _id: orderModel._id, status: { $eq: PENDING_STATUS } });
+        }, 1000 * 60 * 10);
 
         res.status(200).json({
             statusCode: 200,
@@ -174,13 +178,14 @@ async function paymentVerification(req, res, next) {
                 return res.redirect(`${REDIRECT_FRONTEND_URL}`);
             }
             order.paymentId = razorpay_payment_id;
-            order.status = "Completed";
+            order.status = COMPLETED_STATUS;
+            order.paymentStatus = PAID_STATUS;
             await order.save();
             const orderProducts = order.products;
             for (let e of orderProducts) {
                 await ProductModel.findByIdAndUpdate(e.product, { $inc: { stock: -e.quantity } });
             }
-            return res.redirect(`${REDIRECT_FRONTEND_URL}?orderId=${order._id}`);
+            return res.redirect(`${REDIRECT_FRONTEND_URL}?orderId=${order.razorpayOrderId}`);
         }
         return next(new ApiError(400, "Payment failed"));
     } catch (e) {
@@ -199,7 +204,8 @@ async function getOrder(req, res, next) {
             {
                 $match: {
                     user: new mongoose.Types.ObjectId(id),
-                    _id: new mongoose.Types.ObjectId(orderId)
+                    razorpayOrderId: orderId,
+                    status: { $ne: PENDING_STATUS },
                 }
             },
             {
@@ -243,6 +249,7 @@ async function getOrder(req, res, next) {
                 $project: {
                     _id: 1,
                     orderId: 1,
+                    razorpayOrderId: 1,
                     paymentId: 1,
                     product: "$product",
                     orderProductPrice: "$products.orderProductPrice",
@@ -251,6 +258,8 @@ async function getOrder(req, res, next) {
                     discountAmount: 1,
                     paymentAmount: 1,
                     status: 1,
+                    paymentStatus: 1,
+                    method: 1,
                     user: 1,
                     fullName: 1,
                     phoneNo: 1,
@@ -274,6 +283,7 @@ async function getOrder(req, res, next) {
                 $group: {
                     _id: "$_id",
                     orderId: { $first: "$orderId" },
+                    razorpayOrderId: { $first: "$razorpayOrderId" },
                     paymentId: { $first: "$paymentId" },
                     products: {
                         $push: {
@@ -286,6 +296,8 @@ async function getOrder(req, res, next) {
                     discountAmount: { $first: "$discountAmount" },
                     paymentAmount: { $first: "$paymentAmount" },
                     status: { $first: "$status" },
+                    paymentStatus: { $first: "$paymentStatus" },
+                    method: { $first: "$method" },
                     user: { $first: "$user" },
                     fullName: { $first: "$fullName" },
                     phoneNo: { $first: "$phoneNo" },
@@ -319,6 +331,7 @@ async function getAllOrder(req, res, next) {
     try {
         const filter = {
             user: req.user._id,
+            status: { $ne: PENDING_STATUS }
         };
         const orders = await OrderModel.aggregate([
             {
@@ -365,6 +378,7 @@ async function getAllOrder(req, res, next) {
                 $project: {
                     _id: 1,
                     orderId: 1,
+                    razorpayOrderId: 1,
                     paymentId: 1,
                     product: "$product",
                     orderProductPrice: "$products.orderProductPrice",
@@ -373,6 +387,8 @@ async function getAllOrder(req, res, next) {
                     discountAmount: 1,
                     paymentAmount: 1,
                     status: 1,
+                    paymentStatus: 1,
+                    method: 1,
                     user: 1,
                     fullName: 1,
                     phoneNo: 1,
@@ -396,6 +412,7 @@ async function getAllOrder(req, res, next) {
                 $group: {
                     _id: "$_id",
                     orderId: { $first: "$orderId" },
+                    razorpayOrderId: { $first: "$razorpayOrderId" },
                     paymentId: { $first: "$paymentId" },
                     products: {
                         $push: {
@@ -408,6 +425,8 @@ async function getAllOrder(req, res, next) {
                     discountAmount: { $first: "$discountAmount" },
                     paymentAmount: { $first: "$paymentAmount" },
                     status: { $first: "$status" },
+                    paymentStatus: { $first: "$paymentStatus" },
+                    method: { $first: "$method" },
                     user: { $first: "$user" },
                     fullName: { $first: "$fullName" },
                     phoneNo: { $first: "$phoneNo" },

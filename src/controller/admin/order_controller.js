@@ -1,10 +1,14 @@
 const OrderModel = require("../../model/order_model");
 const { productPipeline } = require("../product_controller");
 const ApiError = require("../../util/error");
+const { PENDING_STATUS } = require("../../config/string");
 
 async function getAllOrder(_req, res, next) {
     try {
         const orders = await OrderModel.aggregate([
+            {
+                $match: { status: { $ne: PENDING_STATUS } }
+            },
             {
                 $lookup: {
                     from: 'users',
@@ -46,6 +50,7 @@ async function getAllOrder(_req, res, next) {
                 $project: {
                     _id: 1,
                     orderId: 1,
+                    razorpayOrderId: 1,
                     paymentId: 1,
                     product: "$product",
                     orderProductPrice: "$products.orderProductPrice",
@@ -54,6 +59,8 @@ async function getAllOrder(_req, res, next) {
                     discountAmount: 1,
                     paymentAmount: 1,
                     status: 1,
+                    paymentStatus: 1,
+                    method: 1,
                     user: 1,
                     fullName: 1,
                     phoneNo: 1,
@@ -77,6 +84,7 @@ async function getAllOrder(_req, res, next) {
                 $group: {
                     _id: "$_id",
                     orderId: { $first: "$orderId" },
+                    razorpayOrderId: { $first: "$razorpayOrderId" },
                     paymentId: { $first: "$paymentId" },
                     products: {
                         $push: {
@@ -89,6 +97,8 @@ async function getAllOrder(_req, res, next) {
                     discountAmount: { $first: "$discountAmount" },
                     paymentAmount: { $first: "$paymentAmount" },
                     status: { $first: "$status" },
+                    paymentStatus: { $first: "$paymentStatus" },
+                    method: { $first: "$method" },
                     user: { $first: "$user" },
                     fullName: { $first: "$fullName" },
                     phoneNo: { $first: "$phoneNo" },

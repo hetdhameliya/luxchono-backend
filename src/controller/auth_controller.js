@@ -1,7 +1,7 @@
 const UserModel = require("../model/user_model");
 const OtpModel = require("../model/otp_model");
 const ApiError = require("../util/error");
-const generateOtp = require("../util/generate_otp");
+const { generateOtp } = require("../util/utils");
 const transporter = require("../util/transporter");
 const fs = require("fs");
 const path = require("path");
