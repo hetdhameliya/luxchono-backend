@@ -98,6 +98,10 @@ const productSchema = new Schema(
         isActive: {
             type: Boolean,
             default: true,
+        },
+        offer: {
+            type: Number,
+            default: null,
         }
     },
     { timestamps: true }
@@ -109,6 +113,11 @@ productSchema.post("findOneAndDelete", async function (doc, next) {
     publicIds.push(doc.thumbnailPublicId);
     const promise = publicIds.map((id) => destroy(id));
     await Promise.all(promise);
+    next();
+});
+
+productSchema.pre("save", async function (next) {
+    this.offer = 100 - ((100 * this.price) / this.dummyPrice);
     next();
 });
 
