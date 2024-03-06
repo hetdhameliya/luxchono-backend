@@ -41,7 +41,6 @@ const getProduct = async (req, res, next) => {
         const products = await ProductModel.aggregate([
             {
                 $match: {
-                    isActive: true,
                     $or: [
                         { name: { $regex: req.query.search, $options: 'i' } },
                         { productModel: { $regex: req.query.search, $options: 'i' } }
