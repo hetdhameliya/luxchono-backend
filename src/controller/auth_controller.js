@@ -198,7 +198,7 @@ async function changePassword(req, res, next) {
 async function profile(req, res, next) {
   try {
     const findUser = await UserModel.findById(req.id).select("-password -role -isVerified -isAdminVerified -publicId");
-    res.status(200).json({ statusCode: 200, success: true, date: findUser });
+    res.status(200).json({ statusCode: 200, success: true, data: findUser });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }

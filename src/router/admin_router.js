@@ -3,6 +3,7 @@ const brandRouter = require("./admin/brand_router");
 const categoryRouter = require("./admin/category_router");
 const productRouter = require("./admin/product_router");
 const orderRouter = require("./admin/order_router");
+const offerRouter = require("./admin/offer_router");
 const {
   register,
   verifyAdminEmail,
@@ -23,6 +24,7 @@ router.use("/brand", brandRouter);
 router.use("/category", categoryRouter);
 router.use("/product", productRouter);
 router.use("/order", orderRouter);
+router.use("/offer", offerRouter);
 
 
 module.exports = router;
