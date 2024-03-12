@@ -27,7 +27,7 @@ async function addOffer(req, res, next) {
         offer.publicId = result.public_id;
         await offer.save();
         res.status(200).json({
-            statusCode: 201,
+            statusCode: 200,
             success: true,
             message: 'Offer add successfully',
         });

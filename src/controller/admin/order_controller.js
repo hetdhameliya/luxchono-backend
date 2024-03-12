@@ -1,7 +1,9 @@
 const OrderModel = require("../../model/order_model");
 const { productPipeline } = require("../product_controller");
 const ApiError = require("../../util/error");
-const { PENDING_STATUS } = require("../../config/string");
+const transporter = require("../../util/transporter");
+const { PENDING_STATUS, COMPLETED_STATUS, SHIPPED_STATUS, OUT_OF_DELEVERY_STATUS, DELIVERED_STATUS, CANCELLED_STATUS } = require("../../config/string");
+const { REDIRECT_FRONTEND_URL } = require("../../config/config");
 
 async function getAllOrder(_req, res, next) {
     try {
@@ -126,4 +128,41 @@ async function getAllOrder(_req, res, next) {
     }
 }
 
-module.exports = { getAllOrder };
+async function orderStatusChange(req, res, next) {
+    try {
+        const { status, orderId } = req.body;
+        const allStatus = [PENDING_STATUS, COMPLETED_STATUS, SHIPPED_STATUS, OUT_OF_DELEVERY_STATUS, DELIVERED_STATUS, CANCELLED_STATUS];
+        if (!allStatus.includes(status)) {
+            return next(new ApiError(400, "This status are in valid"));
+        }
+        if (status == PENDING_STATUS || status == COMPLETED_STATUS) {
+            return next(new ApiError(400, "This status are in valid"));
+        }
+        if (!orderId) {
+            return next(new ApiError(400, "Order id is required"));
+        }
+        const findOrder = await OrderModel.findById(orderId).populate("user");
+        console.log(findOrder);
+        if (!findOrder) {
+            return next(new ApiError(400, "Order is not found"));
+        }
+        if (findOrder.status == DELIVERED_STATUS) {
+            return next(new ApiError(400, `After ${DELIVERED_STATUS} status you can not update status`));
+        }
+        if(findOrder.status == status) {
+            return next(new ApiError(400, 'Updated status is same for order status'));
+        }
+        await transporter.sendMail({
+            to: findOrder.user.email,
+            subject: "Order Regarding",
+            text: `Your this order id ${findOrder.orderId} status change ${findOrder.status} to ${status}\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+        });
+        findOrder.status = status;
+        await findOrder.save({ validateBeforeSave: true });
+        res.status(200).json({ statusCode: 200, success: true, message: "Order status update successfully" });
+    } catch (e) {
+        return next(new ApiError(400, "Internal server error"));
+    }
+}
+
+module.exports = { getAllOrder, orderStatusChange };

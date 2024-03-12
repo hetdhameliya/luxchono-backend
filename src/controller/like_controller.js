@@ -1,6 +1,7 @@
 const LikeModel = require("../model/like_model");
 const ProductModel = require("../model/admin/product_model");
 const ApiError = require("../util/error");
+const { productPipeline } = require("./product_controller");
 
 async function addRemoveLike(req, res, next) {
     try {
@@ -41,40 +42,7 @@ async function getAllLikeProduct(req, res, next) {
                     }
                 }
             },
-            {
-                $addFields: {
-                    image: {
-                        $map: {
-                            input: "$image",
-                            as: "image",
-                            in: "$$image.url"
-                        }
-                    }
-                }
-            },
-            {
-                $lookup: {
-                    from: 'categories',
-                    localField: 'category',
-                    foreignField: '_id',
-                    as: 'category'
-                }
-            },
-            {
-                $lookup: {
-                    from: 'brands',
-                    localField: 'brand',
-                    foreignField: '_id',
-                    as: 'brand'
-                }
-            },
-            {
-                $addFields: {
-                    brand: {
-                        $arrayElemAt: ['$brand', 0]
-                    }
-                }
-            }
+            ...productPipeline
         ]).exec();
         return res.status(200).json({ statusCode: 200, success: true, data: likeProducts });
     } catch (e) {

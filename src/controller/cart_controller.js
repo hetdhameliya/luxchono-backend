@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const CartModel = require("../model/cart_model");
 const ApiError = require("../util/error");
+const { productPipeline } = require("./product_controller");
 
 async function addCart(req, res, next) {
     try {
@@ -44,40 +45,7 @@ async function getAllCartProduct(req, res, next) {
                     localField: "pid",
                     as: "product",
                     pipeline: [
-                        {
-                            $addFields: {
-                                image: {
-                                    $map: {
-                                        input: "$image",
-                                        as: "image",
-                                        in: "$$image.url"
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            $lookup: {
-                                from: 'categories',
-                                localField: 'category',
-                                foreignField: '_id',
-                                as: 'category'
-                            }
-                        },
-                        {
-                            $lookup: {
-                                from: 'brands',
-                                localField: 'brand',
-                                foreignField: '_id',
-                                as: 'brand'
-                            }
-                        },
-                        {
-                            $addFields: {
-                                brand: {
-                                    $arrayElemAt: ['$brand', 0]
-                                }
-                            }
-                        },
+                       ...productPipeline
                     ]
                 }
             },
