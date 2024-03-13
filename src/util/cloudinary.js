@@ -26,4 +26,4 @@ async function destroy(publicId) {
 	await cloudinary.uploader.destroy(publicId);
 }
 
-module.exports = { upload, destroy, multipleImageUpload };
+module.exports = { upload, destroy, multipleImageUpload, cloudinary };
