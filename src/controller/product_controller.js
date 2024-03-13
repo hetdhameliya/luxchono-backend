@@ -1,4 +1,5 @@
 const ProductModel = require("../model/admin/product_model");
+const RatingModel = require("../model/rating_model");
 const ApiError = require("../util/error");
 const mongoose = require("mongoose");
 
@@ -34,6 +35,31 @@ const productPipeline = [
         $addFields: {
             brand: {
                 $arrayElemAt: ['$brand', 0]
+            }
+        }
+    },
+    {
+        $lookup: {
+            from: 'ratings',
+            localField: '_id',
+            foreignField: 'product',
+            as: 'rating',
+        }
+    },
+    {
+        $addFields: {
+            totalReviews: { $size: '$rating' },
+            rating: { $avg: '$rating.star' }
+        }
+    },
+    {
+        $addFields: {
+            rating: {
+                $cond: {
+                    if: { $eq: ['$rating', null] },
+                    then: 0,
+                    else: "$rating"
+                }
             }
         }
     }
@@ -138,7 +164,11 @@ async function getOneProduct(req, res, next) {
                 $limit: 8
             }
         ]).exec()
-        res.status(200).json({ statusCode: 200, success: true, data: { product: products[0], similarProduct }, message: "Get one product successfully" });
+        const ratings = await RatingModel.find({ product: products[0]._id }).populate({
+            path: "user",
+            select: "email username"
+        });
+        res.status(200).json({ statusCode: 200, success: true, data: { product: products[0], similarProduct, ratings }, message: "Get one product successfully" });
     } catch (e) {
         return next(new ApiError(400, e.message));
     }
