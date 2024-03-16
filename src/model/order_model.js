@@ -108,6 +108,10 @@ const orderSchema = new Schema(
             type: Boolean,
             default: false
         },
+        cancelDate: {
+            type: Date,
+            default: null,
+        },
         date: {
             type: Date,
             required: true

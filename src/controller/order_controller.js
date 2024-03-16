@@ -8,8 +8,9 @@ const { instance } = require("../config/razorpay_config");
 const OrderModel = require("../model/order_model");
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
-const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD } = require("../config/string");
+const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD, CANCELLED_STATUS } = require("../config/string");
 const { orderIdGenerate } = require("../util/utils");
+const transporter = require("../util/transporter");
 
 async function getOrderProduct(pid, quantity) {
     if (!mongoose.isValidObjectId(pid)) {
@@ -272,6 +273,7 @@ async function getOrder(req, res, next) {
                     pincode: 1,
                     addressType: 1,
                     isCancelled: 1,
+                    cancelDate: 1,
                     date: 1,
                     latitude: 1,
                     longitude: 1,
@@ -310,6 +312,7 @@ async function getOrder(req, res, next) {
                     pincode: { $first: "$pincode" },
                     addressType: { $first: "$addressType" },
                     isCancelled: { $first: "$isCancelled" },
+                    cancelDate: { $first: "$cancelDate" },
                     date: { $first: "$date" },
                     latitude: { $first: "$latitude" },
                     longitude: { $first: "$longitude" },
@@ -401,6 +404,7 @@ async function getAllOrder(req, res, next) {
                     pincode: 1,
                     addressType: 1,
                     isCancelled: 1,
+                    cancelDate: 1,
                     date: 1,
                     latitude: 1,
                     longitude: 1,
@@ -439,6 +443,7 @@ async function getAllOrder(req, res, next) {
                     pincode: { $first: "$pincode" },
                     addressType: { $first: "$addressType" },
                     isCancelled: { $first: "$isCancelled" },
+                    cancelDate: { $first: "$cancelDate" },
                     date: { $first: "$date" },
                     latitude: { $first: "$latitude" },
                     longitude: { $first: "$longitude" },
@@ -456,4 +461,28 @@ async function getAllOrder(req, res, next) {
     }
 }
 
-module.exports = { makeOrder, paymentOrder, paymentVerification, getOrder, getAllOrder };
+async function cancelOrder(req, res, next) {
+    try {
+        const findOrder = await OrderModel.findOne({ _id: req.body.orderId, user: req.id }).populate("user");
+        if (!findOrder) {
+            return next(new ApiError(400, "Order is not found"));
+        }
+        if (findOrder.status !== COMPLETED_STATUS) {
+            return next(new ApiError(400, "You can not cancel the order"));
+        }
+        await transporter.sendMail({
+            to: findOrder.user.email,
+            subject: "Cancel order",
+            text: `Your this order id ${findOrder.orderId} order cancel. give refund with in 2 days.\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+        });
+        findOrder.status = CANCELLED_STATUS;
+        findOrder.isCancelled = true;
+        findOrder.cancelDate = Date.now();
+        await findOrder.save();
+        res.status(200).json({ statusCode: 200, success: true, message: "Order cancel successfully" });
+    } catch (e) {
+        return next(new ApiError(400, "Internal server error"));
+    }
+}
+
+module.exports = { makeOrder, paymentOrder, paymentVerification, getOrder, getAllOrder, cancelOrder };

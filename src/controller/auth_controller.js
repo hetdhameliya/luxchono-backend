@@ -197,11 +197,22 @@ async function changePassword(req, res, next) {
 
 async function profile(req, res, next) {
   try {
-    const findUser = await UserModel.findById(req.id).select("-password -role -isVerified -isAdminVerified -publicId");
+    const findUser = await UserModel.findById(req.id).select("-password -isVerified -isAdminVerified -publicId");
     res.status(200).json({ statusCode: 200, success: true, data: findUser });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
 }
 
-module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile };
+async function editProfile(req, res, next) {
+  try {
+    req.user.username = req.body.username ?? req.user.username;
+    req.user.phoneNo = req.body.phoneNo ?? req.user.phoneNo;
+    await req.user.save();
+    res.status(200).json({ statusCode: 200, success: true, message: 'profile update successfully' });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile };

@@ -73,6 +73,7 @@ async function getAllOrder(_req, res, next) {
                     pincode: 1,
                     addressType: 1,
                     isCancelled: 1,
+                    cancelDate: 1,
                     date: 1,
                     latitude: 1,
                     longitude: 1,
@@ -111,6 +112,7 @@ async function getAllOrder(_req, res, next) {
                     pincode: { $first: "$pincode" },
                     addressType: { $first: "$addressType" },
                     isCancelled: { $first: "$isCancelled" },
+                    cancelDate: { $first: "$cancelDate" },
                     date: { $first: "$date" },
                     latitude: { $first: "$latitude" },
                     longitude: { $first: "$longitude" },
@@ -142,21 +144,31 @@ async function orderStatusChange(req, res, next) {
             return next(new ApiError(400, "Order id is required"));
         }
         const findOrder = await OrderModel.findById(orderId).populate("user");
-        console.log(findOrder);
         if (!findOrder) {
             return next(new ApiError(400, "Order is not found"));
         }
-        if (findOrder.status == DELIVERED_STATUS) {
-            return next(new ApiError(400, `After ${DELIVERED_STATUS} status you can not update status`));
+        if (findOrder.status === DELIVERED_STATUS || findOrder.status === CANCELLED_STATUS) {
+            return next(new ApiError(400, `After ${DELIVERED_STATUS} and ${CANCELLED_STATUS} status you can not update status`));
         }
         if(findOrder.status == status) {
             return next(new ApiError(400, 'Updated status is same for order status'));
         }
-        await transporter.sendMail({
-            to: findOrder.user.email,
-            subject: "Order Regarding",
-            text: `Your this order id ${findOrder.orderId} status change ${findOrder.status} to ${status}\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
-        });
+        if(status !== CANCELLED_STATUS) {
+            await transporter.sendMail({
+                to: findOrder.user.email,
+                subject: "Order Regarding",
+                text: `Your this order id ${findOrder.orderId} status change ${findOrder.status} to ${status}\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+            });
+        }
+        if(status === CANCELLED_STATUS) {
+            await transporter.sendMail({
+                to: findOrder.user.email,
+                subject: "Order Regarding",
+                text: `Your this order id ${findOrder.orderId} order cancel. give refund with in 2 days.\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+            });
+            findOrder.isCancelled = true;
+            findOrder.cancelDate = Date.now();
+        }
         findOrder.status = status;
         await findOrder.save({ validateBeforeSave: true });
         res.status(200).json({ statusCode: 200, success: true, message: "Order status update successfully" });
