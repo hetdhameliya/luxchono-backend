@@ -13,6 +13,6 @@ router.post("/reset-password", resetPassword);
 router.get("/id-to-email", idToEmail);
 router.post("/change-password", verifyUser, changePassword);
 router.get("/profile", verifyUser, profile);
-router.get("/edit-profile", verifyUser, editProfile);
+router.post("/edit-profile", verifyUser, editProfile);
 
 module.exports = router;
