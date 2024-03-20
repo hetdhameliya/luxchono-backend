@@ -14,7 +14,7 @@ async function register(req, res, next) {
     const { email } = req.body;
     const findAdmin = await UserModel.findOne({ email });
     if (findAdmin) {
-      return next(new ApiError(400, "Email already exist"));
+      return next(new ApiError(400, "User alerdy Exist"));
     }
     const admin = new UserModel({ ...req.body, role: ADMIN_ROLE });
     await admin.save();

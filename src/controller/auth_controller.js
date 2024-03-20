@@ -8,7 +8,10 @@ const path = require("path");
 const { comparePassword } = require("../util/hash");
 const { createToken } = require("../util/jwt_token");
 const { USER_ROLE } = require("../config/string");
-const { USER_RESET_PASSWORD_ROUTE, ADMIN_RESET_PASSWORD_ROUTE } = require("../config/config");
+const {
+  USER_RESET_PASSWORD_ROUTE,
+  ADMIN_RESET_PASSWORD_ROUTE,
+} = require("../config/config");
 
 async function verifyEmail(req, res, next) {
   try {
@@ -33,7 +36,11 @@ async function verifyEmail(req, res, next) {
         setTimeout(async () => {
           await OtpModel.findByIdAndDelete(otpModel._id);
         }, 1000 * 60);
-        res.status(200).json({ statusCode: 200, success: true, message: "Otp send your email" });
+        res.status(200).json({
+          statusCode: 200,
+          success: true,
+          message: "Otp send your email",
+        });
       }
     );
   } catch (e) {
@@ -52,7 +59,9 @@ async function verifyOtp(req, res, next) {
       return next(new ApiError(400, "Otp is wrong"));
     }
     await OtpModel.deleteMany({ email: email });
-    res.status(200).json({ statusCode: 200, success: true, message: "Otp is write" });
+    res
+      .status(200)
+      .json({ statusCode: 200, success: true, message: "Otp is Verified" });
   } catch (e) {
     next(new ApiError(400, e.message));
   }
@@ -63,12 +72,13 @@ async function register(req, res, next) {
     const { email } = req.body;
     const findUser = await UserModel.findOne({ email });
     if (findUser) {
-      return next(new ApiError(400, "Email is exist"));
+      return next(new ApiError(400, "User alerdy Exist"));
     }
     const user = new UserModel({ ...req.body, role: USER_ROLE });
     await user.save();
     res.status(200).json({
-      statusCode: 200, success: true,
+      statusCode: 200,
+      success: true,
       message: "Register successfully",
     });
   } catch (e) {
@@ -92,9 +102,12 @@ async function login(req, res, next) {
       role: USER_ROLE,
       email: findUser.email,
     });
-    res
-      .status(200)
-      .json({ statusCode: 200, success: true, token, message: "login successfully" });
+    res.status(200).json({
+      statusCode: 200,
+      success: true,
+      token,
+      message: "login successfully",
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
@@ -110,9 +123,15 @@ async function forgotPassword(req, res, next) {
     const filePath = path.join(__dirname, "../../public/reset_password.html");
     let htmlData = fs.readFileSync(filePath, "utf-8");
     if (findUser.role === USER_ROLE) {
-      htmlData = htmlData.replace("${resetPasswordLink}", `${USER_RESET_PASSWORD_ROUTE}?id=${findUser._id}`);
+      htmlData = htmlData.replace(
+        "${resetPasswordLink}",
+        `${USER_RESET_PASSWORD_ROUTE}?id=${findUser._id}`
+      );
     } else {
-      htmlData = htmlData.replace("${resetPasswordLink}", `${ADMIN_RESET_PASSWORD_ROUTE}?id=${findUser._id}`);
+      htmlData = htmlData.replace(
+        "${resetPasswordLink}",
+        `${ADMIN_RESET_PASSWORD_ROUTE}?id=${findUser._id}`
+      );
     }
     transporter.sendMail(
       {
@@ -124,7 +143,11 @@ async function forgotPassword(req, res, next) {
         if (err) {
           return next(new ApiError(400, err.message));
         }
-        res.status(200).json({ statusCode: 200, success: true, message: "Reset password mail send to your email" });
+        res.status(200).json({
+          statusCode: 200,
+          success: true,
+          message: "Reset password mail send to your email",
+        });
       }
     );
   } catch (e) {
@@ -148,7 +171,11 @@ async function resetPassword(req, res, next) {
     }
     findUser.password = newPassword;
     await findUser.save({ validateBeforeSave: true });
-    res.status(200).json({ statusCode: 200, success: true, message: "Password change successfully" });
+    res.status(200).json({
+      statusCode: 200,
+      success: true,
+      message: "Password change successfully",
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
@@ -164,7 +191,11 @@ async function idToEmail(req, res, next) {
     if (!findUser) {
       return next(new ApiError(400, "User is not exist"));
     }
-    res.status(200).json({ statusCode: 200, success: true, data: { email: findUser.email } });
+    res.status(200).json({
+      statusCode: 200,
+      success: true,
+      data: { email: findUser.email },
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
@@ -187,9 +218,11 @@ async function changePassword(req, res, next) {
     }
     findUser.password = newPassword.trim();
     await findUser.save({ validateBeforeSave: true });
-    res
-      .status(200)
-      .json({ statusCode: 200, success: true, message: "Password change successfully" });
+    res.status(200).json({
+      statusCode: 200,
+      success: true,
+      message: "Password change successfully",
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
@@ -197,7 +230,9 @@ async function changePassword(req, res, next) {
 
 async function profile(req, res, next) {
   try {
-    const findUser = await UserModel.findById(req.id).select("-password -isVerified -isAdminVerified -publicId");
+    const findUser = await UserModel.findById(req.id).select(
+      "-password -isVerified -isAdminVerified -publicId"
+    );
     res.status(200).json({ statusCode: 200, success: true, data: findUser });
   } catch (e) {
     return next(new ApiError(400, e.message));
@@ -209,10 +244,25 @@ async function editProfile(req, res, next) {
     req.user.username = req.body.username ?? req.user.username;
     req.user.phoneNo = req.body.phoneNo ?? req.user.phoneNo;
     await req.user.save();
-    res.status(200).json({ statusCode: 200, success: true, message: 'profile update successfully' });
+    res.status(200).json({
+      statusCode: 200,
+      success: true,
+      message: "profile update successfully",
+    });
   } catch (e) {
     return next(new ApiError(400, e.message));
   }
 }
 
-module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile };
+module.exports = {
+  verifyEmail,
+  verifyOtp,
+  register,
+  login,
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  idToEmail,
+  profile,
+  editProfile,
+};
