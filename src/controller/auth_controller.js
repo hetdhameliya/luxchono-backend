@@ -7,8 +7,9 @@ const fs = require("fs");
 const path = require("path");
 const { comparePassword } = require("../util/hash");
 const { createToken } = require("../util/jwt_token");
-const { USER_ROLE } = require("../config/string");
+const { USER_ROLE, PUBLIC_NOTIFICATION, PRIVATE_NOTIFICATION } = require("../config/string");
 const { USER_RESET_PASSWORD_ROUTE, ADMIN_RESET_PASSWORD_ROUTE } = require("../config/config");
+const NotificationModel = require("../model/notification_model");
 
 async function verifyEmail(req, res, next) {
   try {
@@ -215,4 +216,24 @@ async function editProfile(req, res, next) {
   }
 }
 
-module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile };
+async function getAllNotification(req, res, next) {
+  try {
+    let filter = {
+      $or: [
+        { type: PUBLIC_NOTIFICATION },
+      ]
+    };
+    if(req.id) {
+      filter.$or.push(
+        { $and: [{ user: req.id }, { type: PRIVATE_NOTIFICATION }] }
+      );
+    }
+
+    const notifications = await NotificationModel.find(filter).sort({ createdAt: -1 });
+    res.status(200).json({ statusCode: 200, success: true, message: 'Get all user notification', data: notifications });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+module.exports = { verifyEmail, verifyOtp, register, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile, getAllNotification };

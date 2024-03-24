@@ -1,8 +1,8 @@
 const OrderModel = require("../../model/order_model");
-const { productPipeline } = require("../product_controller");
+const NotificationModel = require("../../model/notification_model");
 const ApiError = require("../../util/error");
 const transporter = require("../../util/transporter");
-const { PENDING_STATUS, COMPLETED_STATUS, SHIPPED_STATUS, OUT_OF_DELEVERY_STATUS, DELIVERED_STATUS, CANCELLED_STATUS } = require("../../config/string");
+const { PENDING_STATUS, COMPLETED_STATUS, SHIPPED_STATUS, OUT_OF_DELEVERY_STATUS, DELIVERED_STATUS, CANCELLED_STATUS, CASH_PAYMENT_METHOD, PAID_STATUS, PRIVATE_NOTIFICATION } = require("../../config/string");
 const { REDIRECT_FRONTEND_URL } = require("../../config/config");
 const { orderPipeline } = require("../order_controller");
 
@@ -41,17 +41,17 @@ async function orderStatusChange(req, res, next) {
         if (findOrder.status === DELIVERED_STATUS || findOrder.status === CANCELLED_STATUS) {
             return next(new ApiError(400, `After ${DELIVERED_STATUS} and ${CANCELLED_STATUS} status you can not update status`));
         }
-        if(findOrder.status == status) {
+        if (findOrder.status == status) {
             return next(new ApiError(400, 'Updated status is same for order status'));
         }
-        if(status !== CANCELLED_STATUS) {
+        if (status !== CANCELLED_STATUS) {
             await transporter.sendMail({
                 to: findOrder.user.email,
                 subject: "Order Regarding",
                 text: `Your this order id ${findOrder.orderId} status change ${findOrder.status} to ${status}\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
             });
         }
-        if(status === CANCELLED_STATUS) {
+        if (status === CANCELLED_STATUS) {
             await transporter.sendMail({
                 to: findOrder.user.email,
                 subject: "Order Regarding",
@@ -59,9 +59,21 @@ async function orderStatusChange(req, res, next) {
             });
             findOrder.isCancelled = true;
             findOrder.cancelDate = Date.now();
+        } else if (status === DELIVERED_STATUS && findOrder.method === CASH_PAYMENT_METHOD) {
+            findOrder.paymentStatus = PAID_STATUS;
         }
         findOrder.status = status;
         await findOrder.save({ validateBeforeSave: true });
+        const notification = new NotificationModel({
+            title: `Order Update: ${findOrder.status}`,
+            description: `Your order ${findOrder.orderId} has been ${findOrder.status}`,
+            type: PRIVATE_NOTIFICATION,
+            user: findOrder.user._id,
+            extra: {
+                order: findOrder._id
+            }
+        });
+        await notification.save({ validateBeforeSave: true });
         res.status(200).json({ statusCode: 200, success: true, message: "Order status update successfully" });
     } catch (e) {
         return next(new ApiError(400, "Internal server error"));

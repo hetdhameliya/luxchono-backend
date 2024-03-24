@@ -81,4 +81,28 @@ async function verifySuperAdmin(req, _res, next) {
     }
 }
 
-module.exports = { verifyUser, verifyAdmin, verifySuperAdmin };
+async function notificationMiddleware(req, _res, next) {
+    try {
+        const authorization = req.headers["authorization"];
+        if (!authorization) {
+            return next();
+        }
+        const token = authorization.split(" ")[1];
+        if (!token) {
+            return next();
+        }
+        const data = verifyToken(token);
+        const findUser = await UserModel.findOne({ _id: data._id, role: SUPER_ADMIN_ROLE });
+        if (!findUser) {
+            return next(new ApiError(401, "This email super admin is not exist"));
+        }
+        req.id = findUser._id;
+        req.role = findUser.role;
+        req.user = findUser;
+        return next();
+    } catch (e) {
+        next();
+    }
+}
+
+module.exports = { verifyUser, verifyAdmin, verifySuperAdmin, notificationMiddleware };

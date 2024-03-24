@@ -11,18 +11,26 @@ async function addCart(req, res, next) {
         if (findCartProduct) {
             findCartProduct.quantity = findCartProduct.quantity + 1;
             await findCartProduct.save();
+            let length = await CartModel.countDocuments({ uid: id });
             return res.status(200).json({
                 statusCode: 200,
                 success: true,
-                message: "Item added to cart"
+                message: "Item added to cart",
+                data: {
+                    length
+                }
             });
         }
         const cartProduct = new CartModel({ pid, uid: id });
         await cartProduct.save();
+        let length = await CartModel.countDocuments({ uid: id });
         return res.status(200).json({
             statusCode: 200,
             success: true,
-            message: "Item added to cart"
+            message: "Item added to cart",
+            data: {
+                length
+            }
         });
     } catch (e) {
         return next(new ApiError(400, e.message));
@@ -45,7 +53,7 @@ async function getAllCartProduct(req, res, next) {
                     localField: "pid",
                     as: "product",
                     pipeline: [
-                       ...productPipeline
+                        ...productPipeline
                     ]
                 }
             },
@@ -94,7 +102,12 @@ async function updateCartProduct(req, res, next) {
         const { quantity } = req.body;
         let updatedCart = await CartModel.findOneAndUpdate({ uid, pid }, { quantity });
         if (updatedCart) {
-            return res.status(200).json({ statusCode: 200, success: true, message: "Cart update successfully" });
+            let length = await CartModel.countDocuments({ uid });
+            return res.status(200).json({
+                statusCode: 200, success: true, message: "Cart update successfully", data: {
+                    length
+                }
+            });
         } else {
             return next(new ApiError(400, 'Cart is not found'));
         }
@@ -109,7 +122,8 @@ async function removeCart(req, res, next) {
         const uid = req.id;
         const removeCart = await CartModel.findOneAndDelete({ uid, pid });
         if (removeCart) {
-            return res.status(200).json({ statusCode: 200, success: true, message: "Cart delete successfully" });
+            let length = await CartModel.countDocuments({ uid });
+            return res.status(200).json({ statusCode: 200, success: true, message: "Cart delete successfully", data: { length } });
         } else {
             return next(new ApiError(400, 'Cart is not found'));
         }
