@@ -8,9 +8,123 @@ const { instance } = require("../config/razorpay_config");
 const OrderModel = require("../model/order_model");
 const crypto = require('crypto');
 const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
-const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD, CANCELLED_STATUS } = require("../config/string");
+const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD, CANCELLED_STATUS, CASH_PAYMENT_METHOD } = require("../config/string");
 const { orderIdGenerate } = require("../util/utils");
 const transporter = require("../util/transporter");
+
+const orderPipeline = [
+    {
+        $lookup: {
+            from: 'users',
+            localField: 'user',
+            foreignField: '_id',
+            as: "user",
+            pipeline: [
+                {
+                    $project: {
+                        username: 1,
+                        email: 1,
+                        phoneNo: 1,
+                    }
+                }
+            ]
+        }
+    },
+    {
+        $unwind: "$user"
+    },
+    {
+        $unwind: "$products"
+    },
+    {
+        $lookup: {
+            from: 'products',
+            localField: 'products.product',
+            foreignField: '_id',
+            as: "product",
+            pipeline: [
+                ...productPipeline
+            ]
+        }
+    },
+    {
+        $unwind: "$product"
+    },
+    {
+        $project: {
+            _id: 1,
+            orderId: 1,
+            razorpayOrderId: 1,
+            paymentId: 1,
+            product: "$product",
+            orderProductPrice: "$products.orderProductPrice",
+            quantity: "$products.quantity",
+            totalAmount: 1,
+            discountAmount: 1,
+            paymentAmount: 1,
+            status: 1,
+            paymentStatus: 1,
+            method: 1,
+            user: 1,
+            fullName: 1,
+            phoneNo: 1,
+            alternativePhoneNo: 1,
+            state: 1,
+            city: 1,
+            address: 1,
+            pincode: 1,
+            addressType: 1,
+            isCancelled: 1,
+            cancelDate: 1,
+            date: 1,
+            latitude: 1,
+            longitude: 1,
+            deliveryDate: 1,
+            createdAt: 1,
+            updatedAt: 1,
+            __v: 1
+        }
+    },
+    {
+        $group: {
+            _id: "$_id",
+            orderId: { $first: "$orderId" },
+            razorpayOrderId: { $first: "$razorpayOrderId" },
+            paymentId: { $first: "$paymentId" },
+            products: {
+                $push: {
+                    product: "$product",
+                    orderProductPrice: "$orderProductPrice",
+                    quantity: "$quantity"
+                }
+            },
+            totalAmount: { $first: "$totalAmount" },
+            discountAmount: { $first: "$discountAmount" },
+            paymentAmount: { $first: "$paymentAmount" },
+            status: { $first: "$status" },
+            paymentStatus: { $first: "$paymentStatus" },
+            method: { $first: "$method" },
+            user: { $first: "$user" },
+            fullName: { $first: "$fullName" },
+            phoneNo: { $first: "$phoneNo" },
+            alternativePhoneNo: { $first: "$alternativePhoneNo" },
+            state: { $first: "$state" },
+            city: { $first: "$city" },
+            address: { $first: "$address" },
+            pincode: { $first: "$pincode" },
+            addressType: { $first: "$addressType" },
+            isCancelled: { $first: "$isCancelled" },
+            cancelDate: { $first: "$cancelDate" },
+            date: { $first: "$date" },
+            latitude: { $first: "$latitude" },
+            longitude: { $first: "$longitude" },
+            deliveryDate: { $first: "$deliveryDate" },
+            createdAt: { $first: "$createdAt" },
+            updatedAt: { $first: "$updatedAt" },
+            __v: { $first: "$__v" }
+        }
+    }
+];
 
 async function getOrderProduct(pid, quantity) {
     if (!mongoose.isValidObjectId(pid)) {
@@ -73,7 +187,10 @@ async function makeOrder(req, res, next) {
 
 async function paymentOrder(req, res, next) {
     try {
-        const { products, address } = req.body;
+        const { products, address, cod } = req.body;
+        if (!products) {
+            return next(new ApiError(400, "Product is not empty"));
+        }
         if (products.length === 0) {
             return next(new ApiError(400, "Product is not empty"));
         }
@@ -122,11 +239,24 @@ async function paymentOrder(req, res, next) {
             date: Date.now(),
             deliveryDate: new Date(deliveryDate),
         });
+
+        await orderModel.save();
+
+        if (cod) {
+            orderModel.method = CASH_PAYMENT_METHOD;
+            orderModel.orderId = orderIdGenerate();
+            orderModel.status = COMPLETED_STATUS;
+            await orderModel.save({ validateBeforeSave: true });
+            await CartModel.deleteMany({ uid: orderModel.user });
+            return res.status(200).json({ statusCode: 200, message: "Order placed successfully", data: {
+                orderId: orderModel._id
+            } });
+        }
+
         const order = await instance.orders.create({
             amount: paymentAmount * 100,
             currency: "INR",
         });
-        await orderModel.save();
         orderModel.razorpayOrderId = order.id;
         orderModel.orderId = orderIdGenerate();
         orderModel.method = ONLINE_PAYMENT_METHOD;
@@ -200,129 +330,24 @@ async function getOrder(req, res, next) {
     try {
         const { orderId } = req.query;
         const id = req.id;
+        const filter = {
+            user: new mongoose.Types.ObjectId(id),
+            status: { $ne: PENDING_STATUS },
+        }
         if (!orderId) {
             return next(new ApiError(400, "Order id is required"));
         }
+        if (!mongoose.isValidObjectId(orderId)) {
+            filter.razorpayOrderId = orderId
+        } else {
+            filter._id = new mongoose.Types.ObjectId(orderId)
+        }
         const order = await OrderModel.aggregate([
             {
-                $match: {
-                    user: new mongoose.Types.ObjectId(id),
-                    razorpayOrderId: orderId,
-                    status: { $ne: PENDING_STATUS },
-                }
+                $match: filter
             },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: "user",
-                    pipeline: [
-                        {
-                            $project: {
-                                username: 1,
-                                email: 1,
-                                phoneNo: 1,
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                $unwind: "$user"
-            },
-            {
-                $unwind: "$products"
-            },
-            {
-                $lookup: {
-                    from: 'products',
-                    localField: 'products.product',
-                    foreignField: '_id',
-                    as: "product",
-                    pipeline: [
-                        ...productPipeline
-                    ]
-                }
-            },
-            {
-                $unwind: "$product"
-            },
-            {
-                $project: {
-                    _id: 1,
-                    orderId: 1,
-                    razorpayOrderId: 1,
-                    paymentId: 1,
-                    product: "$product",
-                    orderProductPrice: "$products.orderProductPrice",
-                    quantity: "$products.quantity",
-                    totalAmount: 1,
-                    discountAmount: 1,
-                    paymentAmount: 1,
-                    status: 1,
-                    paymentStatus: 1,
-                    method: 1,
-                    user: 1,
-                    fullName: 1,
-                    phoneNo: 1,
-                    alternativePhoneNo: 1,
-                    state: 1,
-                    city: 1,
-                    address: 1,
-                    pincode: 1,
-                    addressType: 1,
-                    isCancelled: 1,
-                    cancelDate: 1,
-                    date: 1,
-                    latitude: 1,
-                    longitude: 1,
-                    deliveryDate: 1,
-                    createdAt: 1,
-                    updatedAt: 1,
-                    __v: 1
-                }
-            },
-            {
-                $group: {
-                    _id: "$_id",
-                    orderId: { $first: "$orderId" },
-                    razorpayOrderId: { $first: "$razorpayOrderId" },
-                    paymentId: { $first: "$paymentId" },
-                    products: {
-                        $push: {
-                            product: "$product",
-                            orderProductPrice: "$orderProductPrice",
-                            quantity: "$quantity"
-                        }
-                    },
-                    totalAmount: { $first: "$totalAmount" },
-                    discountAmount: { $first: "$discountAmount" },
-                    paymentAmount: { $first: "$paymentAmount" },
-                    status: { $first: "$status" },
-                    paymentStatus: { $first: "$paymentStatus" },
-                    method: { $first: "$method" },
-                    user: { $first: "$user" },
-                    fullName: { $first: "$fullName" },
-                    phoneNo: { $first: "$phoneNo" },
-                    alternativePhoneNo: { $first: "$alternativePhoneNo" },
-                    state: { $first: "$state" },
-                    city: { $first: "$city" },
-                    address: { $first: "$address" },
-                    pincode: { $first: "$pincode" },
-                    addressType: { $first: "$addressType" },
-                    isCancelled: { $first: "$isCancelled" },
-                    cancelDate: { $first: "$cancelDate" },
-                    date: { $first: "$date" },
-                    latitude: { $first: "$latitude" },
-                    longitude: { $first: "$longitude" },
-                    deliveryDate: { $first: "$deliveryDate" },
-                    createdAt: { $first: "$createdAt" },
-                    updatedAt: { $first: "$updatedAt" },
-                    __v: { $first: "$__v" }
-                }
-            }
-        ]).exec();
+            ...orderPipeline
+        ], { allowDiskUse: true }).exec();
         if (order.length === 0) {
             return next(new ApiError(400, "Order is not found"));
         }
@@ -342,119 +367,9 @@ async function getAllOrder(req, res, next) {
             {
                 $match: filter
             },
-            {
-                $lookup: {
-                    from: 'users',
-                    localField: 'user',
-                    foreignField: '_id',
-                    as: "user",
-                    pipeline: [
-                        {
-                            $project: {
-                                username: 1,
-                                email: 1,
-                                phoneNo: 1,
-                            }
-                        }
-                    ]
-                }
-            },
-            {
-                $unwind: "$user"
-            },
-            {
-                $unwind: "$products"
-            },
-            {
-                $lookup: {
-                    from: 'products',
-                    localField: 'products.product',
-                    foreignField: '_id',
-                    as: "product",
-                    pipeline: [
-                        ...productPipeline
-                    ]
-                }
-            },
-            {
-                $unwind: "$product"
-            },
-            {
-                $project: {
-                    _id: 1,
-                    orderId: 1,
-                    razorpayOrderId: 1,
-                    paymentId: 1,
-                    product: "$product",
-                    orderProductPrice: "$products.orderProductPrice",
-                    quantity: "$products.quantity",
-                    totalAmount: 1,
-                    discountAmount: 1,
-                    paymentAmount: 1,
-                    status: 1,
-                    paymentStatus: 1,
-                    method: 1,
-                    user: 1,
-                    fullName: 1,
-                    phoneNo: 1,
-                    alternativePhoneNo: 1,
-                    state: 1,
-                    city: 1,
-                    address: 1,
-                    pincode: 1,
-                    addressType: 1,
-                    isCancelled: 1,
-                    cancelDate: 1,
-                    date: 1,
-                    latitude: 1,
-                    longitude: 1,
-                    deliveryDate: 1,
-                    createdAt: 1,
-                    updatedAt: 1,
-                    __v: 1
-                }
-            },
-            {
-                $group: {
-                    _id: "$_id",
-                    orderId: { $first: "$orderId" },
-                    razorpayOrderId: { $first: "$razorpayOrderId" },
-                    paymentId: { $first: "$paymentId" },
-                    products: {
-                        $push: {
-                            product: "$product",
-                            orderProductPrice: "$orderProductPrice",
-                            quantity: "$quantity"
-                        }
-                    },
-                    totalAmount: { $first: "$totalAmount" },
-                    discountAmount: { $first: "$discountAmount" },
-                    paymentAmount: { $first: "$paymentAmount" },
-                    status: { $first: "$status" },
-                    paymentStatus: { $first: "$paymentStatus" },
-                    method: { $first: "$method" },
-                    user: { $first: "$user" },
-                    fullName: { $first: "$fullName" },
-                    phoneNo: { $first: "$phoneNo" },
-                    alternativePhoneNo: { $first: "$alternativePhoneNo" },
-                    state: { $first: "$state" },
-                    city: { $first: "$city" },
-                    address: { $first: "$address" },
-                    pincode: { $first: "$pincode" },
-                    addressType: { $first: "$addressType" },
-                    isCancelled: { $first: "$isCancelled" },
-                    cancelDate: { $first: "$cancelDate" },
-                    date: { $first: "$date" },
-                    latitude: { $first: "$latitude" },
-                    longitude: { $first: "$longitude" },
-                    deliveryDate: { $first: "$deliveryDate" },
-                    createdAt: { $first: "$createdAt" },
-                    updatedAt: { $first: "$updatedAt" },
-                    __v: { $first: "$__v" }
-                }
-            },
+            ...orderPipeline,
             { $sort: { createdAt: -1 } }
-        ]).exec();
+        ], { allowDiskUse: true }).exec();
         res.status(200).json({ statusCode: 200, success: true, data: orders });
     } catch (e) {
         return next(new ApiError(400, "Internal server error"));
@@ -485,4 +400,4 @@ async function cancelOrder(req, res, next) {
     }
 }
 
-module.exports = { makeOrder, paymentOrder, paymentVerification, getOrder, getAllOrder, cancelOrder };
+module.exports = { makeOrder, paymentOrder, paymentVerification, getOrder, getAllOrder, cancelOrder, orderPipeline };
