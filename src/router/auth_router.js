@@ -1,6 +1,6 @@
 const { Router } = require("express");
-const { register, verifyEmail, verifyOtp, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile } = require("../controller/auth_controller");
-const { verifyUser } = require("../middleware/verify_user");
+const { register, verifyEmail, verifyOtp, login, changePassword, forgotPassword, resetPassword, idToEmail, profile, editProfile, getAllNotification } = require("../controller/auth_controller");
+const { verifyUser, notificationMiddleware } = require("../middleware/verify_user");
 
 const router = Router();
 
@@ -14,5 +14,6 @@ router.get("/id-to-email", idToEmail);
 router.post("/change-password", verifyUser, changePassword);
 router.get("/profile", verifyUser, profile);
 router.post("/edit-profile", verifyUser, editProfile);
+router.get("/get-user-notificattion", notificationMiddleware, getAllNotification);
 
 module.exports = router;

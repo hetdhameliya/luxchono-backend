@@ -10,18 +10,26 @@ async function addRemoveLike(req, res, next) {
         const findLikeProduct = await LikeModel.findOne({ pid, uid: id });
         if (findLikeProduct) {
             await LikeModel.deleteOne({ pid, uid: id });
+            let length = await LikeModel.countDocuments({ uid: id });
             return res.status(200).json({
                 statusCode: 200,
                 success: true,
-                message: "Remove product from the wishlist"
+                message: "Remove product from the wishlist",
+                data: {
+                    length
+                }
             });
         } else {
             const likeProduct = new LikeModel({ pid, uid: id });
             await likeProduct.save();
+            let length = await LikeModel.countDocuments({ uid: id });
             return res.status(200).json({
                 statusCode: 200,
                 success: true,
-                message: "Add product in the wishlist"
+                message: "Add product in the wishlist",
+                data: {
+                    length
+                }
             });
         }
     } catch (e) {

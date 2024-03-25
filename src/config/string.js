@@ -21,3 +21,7 @@ module.exports.SHIPPED_STATUS = "Shipped";
 module.exports.OUT_OF_DELEVERY_STATUS = "Out of Delivery";
 module.exports.DELIVERED_STATUS = "Delivered";
 module.exports.CANCELLED_STATUS = "Cancelled";
+
+// Notification type
+module.exports.PUBLIC_NOTIFICATION = "public";
+module.exports.PRIVATE_NOTIFICATION = "private";

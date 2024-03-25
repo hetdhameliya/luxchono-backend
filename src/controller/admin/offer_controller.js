@@ -3,6 +3,8 @@ const { upload, destroy } = require("../../util/cloudinary");
 const { isValidObjectId } = require('mongoose');
 const OfferModel = require("../../model/admin/offer_model");
 const { productPipeline } = require("../product_controller");
+const NotificationModel = require("../../model/notification_model");
+const ProductModel = require("../../model/admin/product_model");
 
 async function addOffer(req, res, next) {
     try {
@@ -20,12 +22,24 @@ async function addOffer(req, res, next) {
             updateOffer(req, res, next);
             return;
         }
+        const findProduct = await ProductModel.findById(product);
+        if(!findProduct) {
+            return next(new ApiError(400, "Product is not exist"));
+        }
         const offer = new OfferModel(req.body);
         await offer.save();
         const result = await upload(req.file.path);
         offer.image = result.secure_url;
         offer.publicId = result.public_id;
         await offer.save();
+        const notification = new NotificationModel({
+            title: 'Exciting Offer Alert',
+            description: `Hurry! We're delighted to announce a special offer on our ${findProduct.name}. Don't miss this opportunity to grab ${offer.percentage}% off on your favorite ${findProduct.name}. Explore our collection now and upgrade your style with the finest watches.`,
+            extra: {
+                product: findProduct._id
+            }
+        });
+        await notification.save();
         res.status(200).json({
             statusCode: 200,
             success: true,
@@ -79,6 +93,10 @@ async function getAllOffer(req, res, next) {
 async function updateOffer(req, res, next) {
     try {
         const { startDate, endDate, percentage, product, name, description } = req.body;
+        const findProduct = await ProductModel.findById(product);
+        if(!findProduct) {
+            return next(new ApiError(400, "Product is not exist"));
+        }
         const findOffer = await OfferModel.findById(req.params.id);
         const { file } = req;
         if (!findOffer) {
@@ -98,6 +116,14 @@ async function updateOffer(req, res, next) {
             findOffer.publicId = result.public_id;
         }
         await findOffer.save({ validateBeforeSave: true });
+        const notification = new NotificationModel({
+            title: 'Exciting Offer Alert',
+            description: `Hurry! We're delighted to announce a special offer on our ${findProduct.name}. Don't miss this opportunity to grab ${findOffer.percentage}% off on your favorite ${findProduct.name}. Explore our collection now and upgrade your style with the finest watches.`,
+            extra: {
+                product: findProduct._id
+            }
+        });
+        await notification.save();
         res.status(200).json({
             statusCode: 200,
             success: true,
