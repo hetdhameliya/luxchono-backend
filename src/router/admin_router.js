@@ -10,8 +10,10 @@ const {
   login,
   adminVerified,
   getAllAdmin,
+  getAllUser,
 } = require("../controller/admin/auth_controller");
-const { verifySuperAdmin } = require("../middleware/verify_user");
+const { verifySuperAdmin, verifyAdmin } = require("../middleware/verify_user");
+const { dashboard, brandRevenue } = require("../controller/admin/dashboard_controller");
 
 const router = Router();
 
@@ -20,6 +22,9 @@ router.get("/verify-email", verifyAdminEmail);
 router.post("/login", login);
 router.patch("/admin-verified/:id", verifySuperAdmin, adminVerified);
 router.get("/get-all-admin", verifySuperAdmin, getAllAdmin);
+router.get("/get-all-user", verifyAdmin, getAllUser);
+router.get("/dashboard", verifyAdmin, dashboard);
+router.get("/brand-revenue", verifyAdmin, brandRevenue);
 router.use("/brand", brandRouter);
 router.use("/category", categoryRouter);
 router.use("/product", productRouter);

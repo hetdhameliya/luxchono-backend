@@ -7,7 +7,7 @@ const transporter = require("../../util/transporter");
 const { comparePassword } = require("../../util/hash");
 const { createToken } = require("../../util/jwt_token");
 const { VERIFY_EMAIL_ROUTE } = require("../../config/config");
-const { ADMIN_ROLE, SUPER_ADMIN_ROLE } = require("../../config/string");
+const { ADMIN_ROLE, SUPER_ADMIN_ROLE, USER_ROLE } = require("../../config/string");
 
 async function register(req, res, next) {
   try {
@@ -125,4 +125,13 @@ async function getAllAdmin(_req, res, next) {
   }
 }
 
-module.exports = { register, verifyAdminEmail, login, adminVerified, getAllAdmin };
+async function getAllUser(_req, res, next) {
+  try {
+    const allAdmin = await UserModel.find({ role: USER_ROLE, isVerified: true }).select("-password -isVerified -role -isAdminVerified");
+    return res.status(200).json({ statusCode: 200, success: true, data: allAdmin });
+  } catch (e) {
+    return next(new ApiError(400, e.message));
+  }
+}
+
+module.exports = { register, verifyAdminEmail, login, adminVerified, getAllAdmin, getAllUser };
