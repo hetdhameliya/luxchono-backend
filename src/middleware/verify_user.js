@@ -92,9 +92,9 @@ async function notificationMiddleware(req, _res, next) {
             return next();
         }
         const data = verifyToken(token);
-        const findUser = await UserModel.findOne({ _id: data._id, role: SUPER_ADMIN_ROLE });
+        const findUser = await UserModel.findOne({ _id: data._id });
         if (!findUser) {
-            return next(new ApiError(401, "This email super admin is not exist"));
+            return next(new ApiError(401, "User is not exist"));
         }
         req.id = findUser._id;
         req.role = findUser.role;
