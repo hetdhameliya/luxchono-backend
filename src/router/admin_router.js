@@ -13,7 +13,7 @@ const {
   getAllUser,
 } = require("../controller/admin/auth_controller");
 const { verifySuperAdmin, verifyAdmin } = require("../middleware/verify_user");
-const { dashboard, brandRevenue } = require("../controller/admin/dashboard_controller");
+const { dashboard, brandRevenue, getProductReview, orderCount } = require("../controller/admin/dashboard_controller");
 
 const router = Router();
 
@@ -25,6 +25,8 @@ router.get("/get-all-admin", verifySuperAdmin, getAllAdmin);
 router.get("/get-all-user", verifyAdmin, getAllUser);
 router.get("/dashboard", verifyAdmin, dashboard);
 router.get("/brand-revenue", verifyAdmin, brandRevenue);
+router.get("/get-rating", verifyAdmin, getProductReview);
+router.get("/order-count", verifyAdmin, orderCount);
 router.use("/brand", brandRouter);
 router.use("/category", categoryRouter);
 router.use("/product", productRouter);
