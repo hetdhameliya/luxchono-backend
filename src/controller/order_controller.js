@@ -3,14 +3,17 @@ const ApiError = require("../util/error");
 const ProductModel = require("../model/admin/product_model");
 const AddressModel = require("../model/address_model");
 const CartModel = require("../model/cart_model");
+const NotificationModel = require("../model/notification_model");
 const { productPipeline } = require("./product_controller");
 const { instance } = require("../config/razorpay_config");
 const OrderModel = require("../model/order_model");
 const crypto = require('crypto');
-const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL } = require("../config/config");
-const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD, CANCELLED_STATUS, CASH_PAYMENT_METHOD } = require("../config/string");
+const { RAZORPAY_KEY_ID, WEBSITE_IMAGE_URL, RAZORPAY_CALLBACK_URL, RAZORPAY_KEY_SECRET, REDIRECT_FRONTEND_URL, FRONTEND_URL } = require("../config/config");
+const { PENDING_STATUS, COMPLETED_STATUS, PAID_STATUS, ONLINE_PAYMENT_METHOD, CANCELLED_STATUS, CASH_PAYMENT_METHOD, PRIVATE_NOTIFICATION } = require("../config/string");
 const { orderIdGenerate } = require("../util/utils");
 const transporter = require("../util/transporter");
+const path = require("path");
+const fs = require("fs");
 
 const orderPipeline = [
     {
@@ -248,9 +251,11 @@ async function paymentOrder(req, res, next) {
             orderModel.status = COMPLETED_STATUS;
             await orderModel.save({ validateBeforeSave: true });
             await CartModel.deleteMany({ uid: orderModel.user });
-            return res.status(200).json({ statusCode: 200, message: "Order placed successfully", data: {
-                orderId: orderModel._id
-            } });
+            return res.status(200).json({
+                statusCode: 200, message: "Order placed successfully", data: {
+                    orderId: orderModel._id
+                }
+            });
         }
 
         const order = await instance.orders.create({
@@ -385,15 +390,29 @@ async function cancelOrder(req, res, next) {
         if (findOrder.status !== COMPLETED_STATUS) {
             return next(new ApiError(400, "You can not cancel the order"));
         }
+        let filePath = path.join(__dirname, "../../public/user_order_cancel.html");
+        let htmlData = fs.readFileSync(filePath, "utf-8");
+        htmlData = htmlData.replace("${orderId}", findOrder.orderId);
+        htmlData = htmlData.replace("${redirectUrl}", FRONTEND_URL);
         await transporter.sendMail({
             to: findOrder.user.email,
-            subject: "Cancel order",
-            text: `Your this order id ${findOrder.orderId} order cancel. give refund with in 2 days.\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+            subject: "Order Cancellation Confirmation",
+            html: htmlData,
         });
         findOrder.status = CANCELLED_STATUS;
         findOrder.isCancelled = true;
         findOrder.cancelDate = Date.now();
         await findOrder.save();
+        const notification = new NotificationModel({
+            title: `Order Update: ${findOrder.status}`,
+            description: `Your order ${findOrder.orderId} has been ${findOrder.status}`,
+            type: PRIVATE_NOTIFICATION,
+            user: findOrder.user._id,
+            extra: {
+                order: findOrder._id
+            }
+        });
+        await notification.save({ validateBeforeSave: true });
         res.status(200).json({ statusCode: 200, success: true, message: "Order cancel successfully" });
     } catch (e) {
         return next(new ApiError(400, "Internal server error"));

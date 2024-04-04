@@ -3,8 +3,10 @@ const NotificationModel = require("../../model/notification_model");
 const ApiError = require("../../util/error");
 const transporter = require("../../util/transporter");
 const { PENDING_STATUS, COMPLETED_STATUS, SHIPPED_STATUS, OUT_OF_DELEVERY_STATUS, DELIVERED_STATUS, CANCELLED_STATUS, CASH_PAYMENT_METHOD, PAID_STATUS, PRIVATE_NOTIFICATION } = require("../../config/string");
-const { REDIRECT_FRONTEND_URL } = require("../../config/config");
+const { FRONTEND_URL } = require("../../config/config");
 const { orderPipeline } = require("../order_controller");
+const path = require("path");
+const fs = require("fs");
 
 async function getAllOrder(_req, res, next) {
     try {
@@ -45,17 +47,26 @@ async function orderStatusChange(req, res, next) {
             return next(new ApiError(400, 'Updated status is same for order status'));
         }
         if (status !== CANCELLED_STATUS) {
+            let filePath = path.join(__dirname, "../../../public/order_status_change.html");
+            let htmlData = fs.readFileSync(filePath, "utf-8");
+            htmlData = htmlData.replace("${orderId}", findOrder.orderId);
+            htmlData = htmlData.replace("${newStatus}", status);
+            htmlData = htmlData.replace("${redirectUrl}", FRONTEND_URL);
             await transporter.sendMail({
                 to: findOrder.user.email,
-                subject: "Order Regarding",
-                text: `Your this order id ${findOrder.orderId} status change ${findOrder.status} to ${status}\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+                subject: "Order Status Change",
+                html: htmlData,
             });
         }
         if (status === CANCELLED_STATUS) {
+            let filePath = path.join(__dirname, "../../../public/cancel_order.html");
+            let htmlData = fs.readFileSync(filePath, "utf-8");
+            htmlData = htmlData.replace("${orderId}", findOrder.orderId);
+            htmlData = htmlData.replace("${redirectUrl}", FRONTEND_URL);
             await transporter.sendMail({
                 to: findOrder.user.email,
-                subject: "Order Regarding",
-                text: `Your this order id ${findOrder.orderId} order cancel. give refund with in 2 days.\nCheck to order status click on this link\n${REDIRECT_FRONTEND_URL}?orderId=${findOrder.razorpayOrderId}`
+                subject: "Cancel Order",
+                html: htmlData,
             });
             findOrder.isCancelled = true;
             findOrder.cancelDate = Date.now();
