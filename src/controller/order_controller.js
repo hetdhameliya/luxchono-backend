@@ -334,9 +334,7 @@ async function paymentVerification(req, res, next) {
 async function getOrder(req, res, next) {
     try {
         const { orderId } = req.query;
-        const id = req.id;
         const filter = {
-            user: new mongoose.Types.ObjectId(id),
             status: { $ne: PENDING_STATUS },
         }
         if (!orderId) {
