@@ -34,10 +34,10 @@ const orderPipeline = [
         }
     },
     {
-        $unwind: "$user"
+        $unwind: { path: "$user", preserveNullAndEmptyArrays: true }
     },
     {
-        $unwind: "$products"
+        $unwind: { path: "$products", preserveNullAndEmptyArrays: true }
     },
     {
         $lookup: {
@@ -51,7 +51,7 @@ const orderPipeline = [
         }
     },
     {
-        $unwind: "$product"
+        $unwind: { path: "$product", preserveNullAndEmptyArrays: true }
     },
     {
         $project: {

@@ -57,7 +57,7 @@ async function brandRevenue(_req, res, next) {
                 }
             },
             {
-                $unwind: "$products"
+                $unwind: { path: "$products", preserveNullAndEmptyArrays: true }
             },
             {
                 $lookup: {
@@ -68,7 +68,7 @@ async function brandRevenue(_req, res, next) {
                 }
             },
             {
-                $unwind: "$product"
+                $unwind: { path: "$product", preserveNullAndEmptyArrays: true }
             },
             {
                 $group: {
