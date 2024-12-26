@@ -297,6 +297,7 @@ async function paymentOrder(req, res, next) {
             }
         });
     } catch (e) {
+        console.log(e);
         return next(new ApiError(400, e.message));
     }
 }
